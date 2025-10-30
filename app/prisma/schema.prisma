@@ -1,0 +1,349 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Dare {
+  id              String   @id @default(cuid())
+  onChainId       String   @unique // The Solana program dare account public key
+  title           String
+  description     String
+  creator         String   // Wallet address
+  logoUrl         String?  // Optional logo image URL from Pinata
+  bannerUrl       String?  // Optional banner image URL from Pinata
+  deadline        DateTime
+  minBet          Float
+  totalPool       Float    @default(0)
+  willDoPool      Float    @default(0)
+  wontDoPool      Float    @default(0)
+  isCompleted     Boolean  @default(false)
+  isExpired       Boolean  @default(false)
+  creatorFeeClaimed Boolean @default(false)
+  
+  // Media and proof
+  proofMediaUrl   String?  // Pinata IPFS URL
+  proofDescription String?
+  proofSubmitter  String?  // Wallet address
+  proofTimestamp  DateTime?
+  
+  // Metadata
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  bets            Bet[]
+  proofSubmissions ProofSubmission[]
+  comments        Comment[]
+  chatRoom        ChatRoom?
+  
+  @@map("dares")
+}
+
+model Bet {
+  id              String   @id @default(cuid())
+  onChainId       String   @unique // The Solana program bet account public key
+  dareId          String
+  userId          String   // Reference to User
+  bettor          String   // Wallet address
+  amount          Float
+  betType         BetType
+  isClaimed       Boolean  @default(false)
+  isEarlyCashOut  Boolean  @default(false)
+  
+  // Social features
+  likesCount      Int      @default(0)
+  commentsCount   Int      @default(0)
+  sharesCount     Int      @default(0)
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  dare            Dare     @relation(fields: [dareId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes           BetLike[]
+  comments        BetComment[]
+  
+  @@map("bets")
+}
+
+model ProofSubmission {
+  id              String   @id @default(cuid())
+  dareId          String
+  userId          String   // Reference to User
+  submitter       String   // Wallet address
+  mediaUrl        String   // Pinata IPFS URL
+  description     String
+  mediaType       MediaType
+  ipfsHash        String   // IPFS hash from Pinata
+  isWinningProof  Boolean  @default(false)
+  
+  // Social engagement
+  likesCount      Int      @default(0)
+  commentsCount   Int      @default(0)
+  sharesCount     Int      @default(0)
+  viewsCount      Int      @default(0)
+  
+  // Video metadata
+  duration        Int?     // Video duration in seconds
+  videoBitrate    Int?     // Video quality info
+  videoCodec      String?  // Video codec used
+  
+  // Timestamps
+  submittedAt     DateTime @default(now())
+  createdAt       DateTime @default(now())
+  
+  // Relations
+  dare            Dare     @relation(fields: [dareId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes           ProofSubmissionLike[]
+  comments        ProofSubmissionComment[]
+  
+  @@map("proof_submissions")
+}
+
+model User {
+  id              String   @id @default(cuid())
+  walletAddress   String   @unique
+  username        String?  @unique // Unique username that cannot be changed
+  bio             String?  // User bio/description
+  email           String?  // Optional email
+  avatar          String?  // Pinata IPFS URL for profile pic
+  
+  // Stats
+  daresCreated    Int      @default(0)
+  daresCompleted  Int      @default(0)
+  totalBets       Int      @default(0)
+  totalWinnings   Float    @default(0)
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  bets            Bet[]
+  proofSubmissions ProofSubmission[]
+  betLikes        BetLike[]
+  betComments     BetComment[]
+  proofLikes      ProofSubmissionLike[]
+  proofComments   ProofSubmissionComment[]
+  comments        Comment[]
+  commentLikes    CommentLike[]
+  chatMessages    ChatMessage[]
+  messageReactions MessageReaction[]
+  presence        UserPresence?
+  
+  @@map("users")
+}
+
+model BetLike {
+  id         String   @id @default(cuid())
+  betId      String
+  userId     String
+  userWallet String   // Wallet address for easy lookup
+  createdAt  DateTime @default(now())
+  
+  // Relations
+  bet        Bet      @relation(fields: [betId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Unique constraint to prevent duplicate likes
+  @@unique([betId, userId])
+  @@map("bet_likes")
+}
+
+model BetComment {
+  id         String   @id @default(cuid())
+  betId      String
+  userId     String
+  userWallet String   // Wallet address for easy lookup
+  content    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  // Relations
+  bet        Bet      @relation(fields: [betId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("bet_comments")
+}
+
+model Comment {
+  id         String   @id @default(cuid())
+  dareId     String
+  userId     String
+  userWallet String   // Wallet address for easy lookup
+  username   String?  // Cached username for performance
+  avatar     String?  // Cached avatar for performance
+  content    String
+  likesCount Int      @default(0)
+  parentId   String?  // For nested replies
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  // Relations
+  dare       Dare     @relation(fields: [dareId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent     Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies    Comment[] @relation("CommentReplies")
+  likes      CommentLike[]
+  
+  @@map("comments")
+}
+
+model CommentLike {
+  id         String   @id @default(cuid())
+  commentId  String
+  userId     String
+  userWallet String   // Wallet address for easy lookup
+  createdAt  DateTime @default(now())
+  
+  // Relations
+  comment    Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Unique constraint to prevent duplicate likes
+  @@unique([commentId, userId])
+  @@map("comment_likes")
+}
+
+model ProofSubmissionLike {
+  id               String   @id @default(cuid())
+  proofSubmissionId String
+  userId           String
+  userWallet       String   // Wallet address for easy lookup
+  createdAt        DateTime @default(now())
+  
+  // Relations
+  proofSubmission  ProofSubmission @relation(fields: [proofSubmissionId], references: [id], onDelete: Cascade)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Unique constraint to prevent duplicate likes
+  @@unique([proofSubmissionId, userId])
+  @@map("proof_submission_likes")
+}
+
+model ProofSubmissionComment {
+  id               String   @id @default(cuid())
+  proofSubmissionId String
+  userId           String
+  userWallet       String   // Wallet address for easy lookup
+  content          String
+  parentId         String?  // For nested replies
+  likesCount       Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  // Relations
+  proofSubmission  ProofSubmission @relation(fields: [proofSubmissionId], references: [id], onDelete: Cascade)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent           ProofSubmissionComment? @relation("ProofCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies          ProofSubmissionComment[] @relation("ProofCommentReplies")
+  
+  @@map("proof_submission_comments")
+}
+
+model ChatRoom {
+  id         String   @id @default(cuid())
+  dareId     String   @unique // One chat room per dare
+  name       String   // Display name for the room
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  // Relations
+  dare       Dare     @relation(fields: [dareId], references: [id], onDelete: Cascade)
+  messages   ChatMessage[]
+  
+  @@map("chat_rooms")
+}
+
+model ChatMessage {
+  id         String   @id @default(cuid())
+  chatRoomId String
+  userId     String
+  userWallet String   // Wallet address for quick lookup
+  username   String?  // Cached username for performance
+  content    String
+  messageType MessageType @default(TEXT)
+  isEdited   Boolean  @default(false)
+  isDeleted  Boolean  @default(false)
+  replyToId  String?  // Reference to another message for replies
+  
+  // Timestamps
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  // Relations
+  chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replyTo    ChatMessage? @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies    ChatMessage[] @relation("MessageReplies")
+  reactions  MessageReaction[]
+  
+  @@map("chat_messages")
+}
+
+model MessageReaction {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  userWallet String  // Wallet address for quick lookup
+  emoji     String   // Emoji or reaction type (🔥, 💀, 😂, etc.)
+  createdAt DateTime @default(now())
+  
+  // Relations
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Unique constraint to prevent duplicate reactions
+  @@unique([messageId, userId, emoji])
+  @@map("message_reactions")
+}
+
+model UserPresence {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  userWallet String   @unique // Wallet address
+  username   String?  // Cached username
+  isOnline   Boolean  @default(false)
+  lastSeen   DateTime @default(now())
+  currentRoom String? // Current chat room ID they're in
+  socketId   String?  // Socket.io connection ID
+  
+  // Timestamps
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  // Relations
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("user_presence")
+}
+
+enum BetType {
+  WILL_DO
+  WONT_DO
+}
+
+enum MediaType {
+  VIDEO
+  IMAGE
+  AUDIO
+  DOCUMENT
+}
+
+enum MessageType {
+  TEXT
+  SYSTEM
+  ANNOUNCEMENT
+}

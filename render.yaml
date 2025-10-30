@@ -1,0 +1,22 @@
+version: 2
+
+services:
+  - type: web
+    name: darebet-frontend
+    env: node
+    buildCommand: npm run build
+    startCommand: npm run start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_SOLANA_NETWORK
+        value: devnet
+    rootDir: ./
+    autoDeploy: true
+    
+build:
+  commands:
+    - npm install
+    - cd app && npm install
+    - cd app && npm run build

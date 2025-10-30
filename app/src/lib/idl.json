@@ -1,0 +1,125 @@
+{
+  "version": "0.1.0",
+  "name": "dare_betting",
+  "instructions": [
+    {
+      "name": "createDare",
+      "accounts": [
+        { "name": "dare", "isMut": true, "isSigner": false },
+        { "name": "poolTokenAccount", "isMut": true, "isSigner": false },
+        { "name": "mint", "isMut": false, "isSigner": false },
+        { "name": "creator", "isMut": true, "isSigner": true },
+        { "name": "systemProgram", "isMut": false, "isSigner": false },
+        { "name": "tokenProgram", "isMut": false, "isSigner": false },
+        { "name": "rent", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "title", "type": "string" },
+        { "name": "description", "type": "string" },
+        { "name": "deadline", "type": "i64" },
+        { "name": "minBet", "type": "u64" }
+      ]
+    },
+    {
+      "name": "placeBet",
+      "accounts": [
+        { "name": "dare", "isMut": true, "isSigner": false },
+        { "name": "bet", "isMut": true, "isSigner": false },
+        { "name": "poolTokenAccount", "isMut": true, "isSigner": false },
+        { "name": "bettorTokenAccount", "isMut": true, "isSigner": false },
+        { "name": "bettor", "isMut": true, "isSigner": true },
+        { "name": "systemProgram", "isMut": false, "isSigner": false },
+        { "name": "tokenProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "amount", "type": "u64" },
+        { "name": "betType", "type": { "defined": "BetType" } }
+      ]
+    },
+    {
+      "name": "cashOutEarly",
+      "accounts": [
+        { "name": "dare", "isMut": true, "isSigner": false },
+        { "name": "bet", "isMut": true, "isSigner": false },
+        { "name": "poolTokenAccount", "isMut": true, "isSigner": false },
+        { "name": "bettorTokenAccount", "isMut": true, "isSigner": false },
+        { "name": "bettor", "isMut": false, "isSigner": true },
+        { "name": "tokenProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Dare",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "creator", "type": "publicKey" },
+          { "name": "title", "type": "string" },
+          { "name": "description", "type": "string" },
+          { "name": "deadline", "type": "i64" },
+          { "name": "minBet", "type": "u64" },
+          { "name": "totalPool", "type": "u64" },
+          { "name": "willDoPool", "type": "u64" },
+          { "name": "wontDoPool", "type": "u64" },
+          { "name": "isCompleted", "type": "bool" },
+          { "name": "isExpired", "type": "bool" },
+          { "name": "completionProof", "type": { "option": { "defined": "CompletionProof" } } },
+          { "name": "creatorFeeClaimed", "type": "bool" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "Bet",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "dare", "type": "publicKey" },
+          { "name": "bettor", "type": "publicKey" },
+          { "name": "amount", "type": "u64" },
+          { "name": "betType", "type": { "defined": "BetType" } },
+          { "name": "isClaimed", "type": "bool" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "CompletionProof",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "submitter", "type": "publicKey" },
+          { "name": "proofHash", "type": "string" },
+          { "name": "proofDescription", "type": "string" },
+          { "name": "timestamp", "type": "i64" }
+        ]
+      }
+    },
+    {
+      "name": "BetType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          { "name": "WillDo" },
+          { "name": "WontDo" }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    { "code": 6000, "name": "BetTooLow", "msg": "Bet amount is below minimum" },
+    { "code": 6001, "name": "DareExpired", "msg": "Dare has expired" },
+    { "code": 6002, "name": "DareAlreadyCompleted", "msg": "Dare is already completed" },
+    { "code": 6003, "name": "AlreadyClaimed", "msg": "Winnings have already been claimed" },
+    { "code": 6004, "name": "DareNotFinalized", "msg": "Dare is not finalized yet" },
+    { "code": 6005, "name": "NoPayout", "msg": "No payout available" },
+    { "code": 6006, "name": "DareNotCompleted", "msg": "Dare is not completed" },
+    { "code": 6007, "name": "NotSubmitter", "msg": "Not the submitter of the proof" },
+    { "code": 6008, "name": "CreatorFeeAlreadyClaimed", "msg": "Creator fee has already been claimed" },
+    { "code": 6009, "name": "CashOutTooLate", "msg": "Cannot cash out within 10 minutes of deadline" }
+  ]
+}

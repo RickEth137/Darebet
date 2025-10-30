@@ -1,0 +1,47 @@
+{
+  "name": "dare-betting-platform",
+  "version": "0.1.0",
+  "description": "Solana dare betting platform where users can create dares and bet on outcomes",
+  "main": "index.js",
+  "scripts": {
+    "build": "cd app && npm install && npm run build",
+    "start": "cd app && npm start",
+    "dev": "cd app && npm run dev",
+    "test": "anchor test",
+    "deploy": "anchor deploy",
+    "dev:app": "cd app && npm run dev",
+    "build:app": "cd app && npm run build",
+    "install:app": "cd app && npm install",
+    "postinstall": "cd app && npm install"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.29.0",
+    "@solana/spl-token": "^0.4.14"
+  },
+  "devDependencies": {
+    "@types/bn.js": "^5.1.0",
+    "@types/chai": "^4.3.0",
+    "@types/mocha": "^9.0.0",
+    "chai": "^4.3.0",
+    "mocha": "^9.0.3",
+    "ts-mocha": "^10.0.0",
+    "typescript": "^4.3.5"
+  },
+  "keywords": [
+    "solana",
+    "anchor",
+    "betting",
+    "dare",
+    "blockchain"
+  ],
+  "author": "Devils Due Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RickEth137/Darebet.git"
+  }
+}
