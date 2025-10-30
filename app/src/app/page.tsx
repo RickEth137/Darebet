@@ -38,6 +38,7 @@ export default function HomePage() {
         publicKey: mockPublicKey,
         account: {
           creator: mockPublicKey,
+          platformAuthority: mockPublicKey,
           title: "EAT 10 GHOST PEPPERS IN 5 MINUTES",
           description: "I DARE YOU TO CONSUME 10 CAROLINA REAPER GHOST PEPPERS WITHIN 5 MINUTES WITHOUT DRINKING ANYTHING. RECORD THE ENTIRE PROCESS.\n\nRules:\n• Must consume 10 full Carolina Reaper peppers\n• Time limit is strictly 5 minutes\n• No liquids allowed during or 10 minutes after\n• Must be recorded in one continuous take\n• Face must be visible throughout recording\n• Must show peppers before consumption\n• Timer must be visible in video",
           deadline: now + (7 * 24 * 60 * 60), // 7 days from now
@@ -56,6 +57,7 @@ export default function HomePage() {
         publicKey: mockPublicKey,
         account: {
           creator: mockPublicKey,
+          platformAuthority: mockPublicKey,
           title: "SLEEP IN A CEMETERY FOR 24 HOURS",
           description: "SPEND AN ENTIRE NIGHT AND DAY IN A GRAVEYARD. NO LEAVING THE PREMISES. DOCUMENT WITH TIMESTAMPS EVERY 2 HOURS.\n\nRules:\n• Must stay within cemetery boundaries for full 24 hours\n• No leaving for any reason including bathroom breaks\n• Must document with timestamp every 2 hours\n• Must record entry and exit times\n• No assistance from others during the challenge\n• Must show cemetery sign/name in initial recording",
           deadline: now + (14 * 24 * 60 * 60), // 14 days from now
@@ -74,6 +76,7 @@ export default function HomePage() {
         publicKey: mockPublicKey,
         account: {
           creator: mockPublicKey,
+          platformAuthority: mockPublicKey,
           title: "SHAVE HEAD AND EYEBROWS COMPLETELY",
           description: "COMPLETELY SHAVE OFF ALL HAIR INCLUDING EYEBROWS. MUST KEEP IT OFF FOR AT LEAST 30 DAYS. NO WIGS OR FAKE HAIR ALLOWED.\n\nRules:\n• Must shave head completely bald\n• Must remove all eyebrow hair\n• No wigs, hats, or fake hair for 30 days\n• Must document before/after with timestamps\n• Weekly progress photos required\n• No professional makeup to simulate hair",
           deadline: now + (3 * 24 * 60 * 60), // 3 days from now
@@ -92,6 +95,7 @@ export default function HomePage() {
         publicKey: mockPublicKey,
         account: {
           creator: mockPublicKey,
+          platformAuthority: mockPublicKey,
           title: "WALK BACKWARDS FOR ENTIRE DAY",
           description: "WALK ONLY BACKWARDS FOR 24 HOURS STRAIGHT. NO FORWARD STEPS ALLOWED. DOCUMENT THE JOURNEY WITH CONTINUOUS VIDEO.\n\nRules:\n• Zero forward steps for full 24 hours\n• Must be recorded continuously or with timestamps\n• No assistance from others for navigation\n• Must complete normal daily activities backwards\n• Can use mirrors but no guides or helpers\n• Must document start and end times clearly",
           deadline: now + (10 * 24 * 60 * 60), // 10 days from now
@@ -110,6 +114,7 @@ export default function HomePage() {
         publicKey: mockPublicKey,
         account: {
           creator: mockPublicKey,
+          platformAuthority: mockPublicKey,
           title: "EAT NOTHING BUT MAYO FOR 3 DAYS",
           description: "CONSUME ONLY MAYONNAISE FOR 72 HOURS. NO OTHER FOOD OR DRINKS EXCEPT WATER. MUST BE DOCUMENTED WITH MEAL TIMESTAMPS.",
           deadline: now + (5 * 24 * 60 * 60), // 5 days from now
@@ -128,6 +133,7 @@ export default function HomePage() {
         publicKey: mockPublicKey,
         account: {
           creator: mockPublicKey,
+          platformAuthority: mockPublicKey,
           title: "TALK LIKE PIRATE FOR ONE MONTH",
           description: "SPEAK ONLY IN PIRATE LANGUAGE FOR 30 CONSECUTIVE DAYS. MUST BE MAINTAINED IN ALL CONVERSATIONS, WORK, AND PUBLIC INTERACTIONS.",
           deadline: now + (2 * 24 * 60 * 60), // 2 days from now

@@ -118,7 +118,7 @@ const VideoRecorder: React.FC<VideoRecorderProps> = ({
       };
 
       // Check for supported MIME types (better mobile compatibility)
-      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+      if (options.mimeType && !MediaRecorder.isTypeSupported(options.mimeType)) {
         if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) {
           options.mimeType = 'video/webm;codecs=vp8,opus';
         } else if (MediaRecorder.isTypeSupported('video/webm')) {

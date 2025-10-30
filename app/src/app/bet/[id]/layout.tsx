@@ -39,6 +39,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const title = `${username} bet ${bet.amount} SOL that they ${betTypeText} complete "${bet.dare.title}"`;
     const description = `Check out this exciting bet on Dare Bets! ${bet.dare.description.slice(0, 100)}${bet.dare.description.length > 100 ? '...' : ''}`;
     
+    const defaultImage = "https://brown-traditional-sheep-998.mypinata.cloud/ipfs/bafkreiacb5xsbqh63jxw665fjy5kxvqrp5um6mmupmjqafnegyk3yfr2gq";
+    const logoUrl = bet.dare.logoUrl || defaultImage;
+    
     return {
       title: `${title} - Dare Bets`,
       description,
@@ -47,7 +50,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         description,
         images: [
           {
-            url: bet.dare.logoUrl,
+            url: logoUrl,
             width: 1200,
             height: 630,
             alt: bet.dare.title,
@@ -60,7 +63,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         card: 'summary_large_image',
         title,
         description,
-        images: [bet.dare.logoUrl],
+        images: [logoUrl],
       },
     };
   } catch (error) {

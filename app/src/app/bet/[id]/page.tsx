@@ -66,7 +66,7 @@ export default function BetPage() {
   const [likingInProgress, setLikingInProgress] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
 
-  const betId = params.id as string;
+  const betId = params?.id as string;
 
   useEffect(() => {
     if (betId) {

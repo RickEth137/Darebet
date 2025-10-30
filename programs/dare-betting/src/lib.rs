@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 
-declare_id!("your_program_id_here");
+declare_id!("11111111111111111111111111111111");
 
 #[program]
 pub mod dare_betting {
@@ -175,16 +175,14 @@ pub mod dare_betting {
         } else {
             return Err(ErrorCode::DareNotFinalized.into());
         }
-                payout = (bet.amount * available_pool) / dare.wont_do_pool;
-            }
-        }
 
         require!(payout > 0, ErrorCode::NoPayout);
 
         // Transfer SOL winnings from pool to winner
+        let dare_key = dare.key();
         let seeds = &[
             b"pool",
-            dare.key().as_ref(),
+            dare_key.as_ref(),
             &[ctx.bumps.pool_account],
         ];
         let signer = &[&seeds[..]];
@@ -233,9 +231,10 @@ pub mod dare_betting {
         let winner_reward = available_pool * reward_percentage / 100;
 
         // Transfer SOL reward from pool to winner
+        let dare_key = dare.key();
         let seeds = &[
             b"pool",
-            dare.key().as_ref(),
+            dare_key.as_ref(),
             &[ctx.bumps.pool_account],
         ];
         let signer = &[&seeds[..]];
@@ -260,9 +259,6 @@ pub mod dare_betting {
             3 => dare.third_place_claimed = true,
             _ => {},
         }
-
-        Ok(())
-    }
 
         Ok(())
     }
@@ -295,9 +291,10 @@ pub mod dare_betting {
         dare.total_pool -= bet.amount;
 
         // Transfer SOL cash out amount to bettor
+        let dare_key = dare.key();
         let seeds = &[
             b"pool",
-            dare.key().as_ref(),
+            dare_key.as_ref(),
             &[ctx.bumps.pool_account],
         ];
         let signer = &[&seeds[..]];
@@ -330,9 +327,10 @@ pub mod dare_betting {
         let creator_fee = dare.total_pool * 2 / 100;
 
         // Transfer SOL creator fee from pool to creator
+        let dare_key = dare.key();
         let seeds = &[
             b"pool",
-            dare.key().as_ref(),
+            dare_key.as_ref(),
             &[ctx.bumps.pool_account],
         ];
         let signer = &[&seeds[..]];

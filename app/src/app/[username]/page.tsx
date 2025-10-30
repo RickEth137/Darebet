@@ -77,7 +77,7 @@ export default function PublicUserProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const username = params.username as string;
+  const username = params?.username as string;
 
   useEffect(() => {
     if (username) {

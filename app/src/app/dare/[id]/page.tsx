@@ -21,7 +21,7 @@ export default function DareDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const dareId = params.id as string;
+  const dareId = params?.id as string;
 
   useEffect(() => {
     if (dareId) {
