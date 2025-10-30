@@ -1,0 +1,7 @@
+[build]
+rustflags = [
+    "--cfg", "feature=\"anchor-debug\"",
+    "--cfg", "feature=\"custom-heap\"",
+    "--cfg", "feature=\"custom-panic\"",
+    "--cfg", "target_os=\"solana\"",
+]
