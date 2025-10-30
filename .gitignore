@@ -72,3 +72,32 @@ temp/
 # Build artifacts
 *.tgz
 *.tar.gz
+
+# Media files (use Pinata for storage)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.mp4
+*.avi
+*.mov
+*.webm
+*.zip
+*.rar
+*.7z
+*.exe
+*.msi
+*.dmg
+
+# Design files
+*.psd
+*.ai
+*.eps
+*.sketch
+*.fig
+
+# Font files
+*.ttf
+*.otf
+*.woff
+*.woff2
