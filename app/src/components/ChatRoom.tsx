@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { formatDistanceToNow } from 'date-fns';
+import { useSocket } from '@/contexts/SocketContext';
 
 interface ChatMessage {
   id: string;
@@ -11,19 +12,25 @@ interface ChatMessage {
   username?: string;
   createdAt: string;
   messageType: 'TEXT' | 'SYSTEM' | 'ANNOUNCEMENT';
+  user?: {
+    id: string;
+    username?: string;
+    avatar?: string;
+    walletAddress: string;
+  };
   replyTo?: {
     id: string;
     content: string;
     username?: string;
-    createdAt: string;
   };
   reactions: Array<{
     emoji: string;
     userWallet: string;
+    user?: {
+      id: string;
+      username?: string;
+    };
   }>;
-  _count: {
-    replies: number;
-  };
 }
 
 interface OnlineUser {
@@ -40,61 +47,98 @@ interface ChatRoomProps {
 
 export const ChatRoom: React.FC<ChatRoomProps> = ({ dareId, dareTitle }) => {
   const { publicKey } = useWallet();
+  const { socket, isConnected, joinDare, leaveDare, sendMessage: sendSocketMessage } = useSocket();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
+  const [onlineCount, setOnlineCount] = useState(0);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [username, setUsername] = useState<string>('');
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const pollIntervalRef = useRef<NodeJS.Timeout>();
+  const typingTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // Fetch user data
+  useEffect(() => {
+    if (!publicKey) return;
+
+    fetch(`/api/users/${publicKey.toBase58()}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data) {
+          setUserId(data.id);
+          setUsername(data.username || `${publicKey.toBase58().slice(0, 4)}...${publicKey.toBase58().slice(-4)}`);
+        }
+      })
+      .catch(console.error);
+  }, [publicKey]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  // Load messages and set up polling
+  // Join dare room and set up WebSocket listeners
   useEffect(() => {
+    if (!socket || !userId || !publicKey) return;
+
+    // Load initial messages
     loadMessages();
-    loadOnlineUsers();
-    
-    // Poll for new messages every 3 seconds
-    pollIntervalRef.current = setInterval(() => {
-      loadMessages();
-      loadOnlineUsers();
-    }, 3000);
 
-    return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
+    // Join the dare's chat room
+    joinDare(dareId);
+
+    // Listen for new messages
+    socket.on('new-message', (message: ChatMessage) => {
+      setMessages(prev => [...prev, message]);
+    });
+
+    // Listen for user joined
+    socket.on('user-joined', ({ userId: joinedUserId, username: joinedUsername, onlineCount: count }) => {
+      setOnlineCount(count);
+      if (joinedUserId !== userId) {
+        // Optional: Show "X joined" system message
+        console.log(`${joinedUsername} joined the chat`);
       }
-    };
-  }, [dareId]);
+    });
 
-  // Update user presence
-  useEffect(() => {
-    if (!publicKey) return;
+    // Listen for user left
+    socket.on('user-left', ({ userId: leftUserId, onlineCount: count }) => {
+      setOnlineCount(count);
+    });
 
-    updatePresence(true);
+    // Listen for typing indicators
+    socket.on('user-typing', ({ userId: typingUserId, username: typingUsername }) => {
+      if (typingUserId !== userId) {
+        setTypingUsers(prev => [...prev, typingUsername]);
+      }
+    });
 
-    const interval = setInterval(() => {
-      updatePresence(true);
-    }, 30000); // Update every 30 seconds
+    socket.on('user-stop-typing', ({ userId: typingUserId }) => {
+      setTypingUsers(prev => prev.filter((_, idx) => idx !== 0)); // Remove first typing user
+    });
 
+    // Cleanup
     return () => {
-      clearInterval(interval);
-      updatePresence(false);
+      socket.off('new-message');
+      socket.off('user-joined');
+      socket.off('user-left');
+      socket.off('user-typing');
+      socket.off('user-stop-typing');
+      leaveDare(dareId);
     };
-  }, [publicKey, dareId]);
+  }, [socket, dareId, userId, publicKey]);
 
   const loadMessages = async () => {
     try {
-      const response = await fetch(`/api/chat/messages?dareId=${dareId}&limit=50`);
+      const response = await fetch(`/api/chat/${dareId}/messages?limit=50`);
       const data = await response.json();
       
-      if (data.success) {
-        setMessages(data.data.messages);
+      if (data.messages) {
+        setMessages(data.messages);
       }
     } catch (error) {
       console.error('Error loading messages:', error);
@@ -103,63 +147,54 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ dareId, dareTitle }) => {
     }
   };
 
-  const loadOnlineUsers = async () => {
-    try {
-      const response = await fetch(`/api/chat/presence?dareId=${dareId}`);
-      const data = await response.json();
-      
-      if (data.success) {
-        setOnlineUsers(data.data.onlineUsers);
-      }
-    } catch (error) {
-      console.error('Error loading online users:', error);
-    }
-  };
-
-  const updatePresence = async (isOnline: boolean) => {
-    if (!publicKey) return;
-
-    try {
-      await fetch('/api/chat/presence', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userWallet: publicKey.toString(),
-          dareId,
-          isOnline
-        })
-      });
-    } catch (error) {
-      console.error('Error updating presence:', error);
-    }
-  };
-
-  const sendMessage = async () => {
-    if (!newMessage.trim() || !publicKey || sending) return;
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !publicKey || sending || !userId) return;
 
     setSending(true);
     try {
-      const response = await fetch('/api/chat/messages', {
+      // Save to database first
+      const response = await fetch(`/api/chat/${dareId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          dareId,
-          content: newMessage.trim(),
-          userWallet: publicKey.toString()
+          userId,
+          userWallet: publicKey.toString(),
+          username,
+          content: newMessage.trim()
         })
       });
 
       const data = await response.json();
-      if (data.success) {
+      if (data.message) {
+        // Broadcast via WebSocket (will be received by all clients including sender)
+        sendSocketMessage(dareId, data.message);
         setNewMessage('');
-        // Add the new message immediately for better UX
-        setMessages(prev => [...prev, data.data]);
       }
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
       setSending(false);
     }
+  };
+
+  const handleTyping = () => {
+    if (!socket || !userId) return;
+
+    socket.emit('typing', {
+      dareId,
+      userId,
+      username,
+    });
+
+    // Clear previous timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Stop typing after 2 seconds of inactivity
+    typingTimeoutRef.current = setTimeout(() => {
+      socket.emit('stop-typing', { dareId, userId });
+    }, 2000);
   };
 
   const scrollToBottom = () => {
@@ -174,7 +209,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ dareId, dareTitle }) => {
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      handleSendMessage();
     }
   };
 
@@ -198,10 +233,10 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ dareId, dareTitle }) => {
         <div>
           <h3 className="text-lg font-brutal font-bold text-anarchist-red uppercase tracking-wider flex items-center">
             💬 LIVE CHAT
-            <span className="ml-2 w-2 h-2 rounded-full bg-green-500"></span>
+            <span className={`ml-2 w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-anarchist-gray'}`}></span>
           </h3>
           <p className="text-xs text-anarchist-gray font-brutal">
-            {onlineUsers.length} online
+            {onlineCount} online {isConnected ? '• WebSocket' : '• Connecting...'}
           </p>
         </div>
         <div className="text-xs text-anarchist-gray font-brutal">
@@ -229,7 +264,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ dareId, dareTitle }) => {
                 <div className="flex-1">
                   <div className="flex items-center space-x-2 mb-1">
                     <span className="text-xs font-brutal font-bold text-anarchist-red">
-                      {getUserDisplayName(message.userWallet)}
+                      {message.user?.username || getUserDisplayName(message.userWallet)}
                     </span>
                     <span className="text-xs text-anarchist-gray">
                       {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
@@ -262,27 +297,30 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ dareId, dareTitle }) => {
           <input
             type="text"
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
+            onChange={(e) => {
+              setNewMessage(e.target.value);
+              handleTyping();
+            }}
             onKeyPress={handleKeyPress}
             placeholder="Type a message..."
             className="flex-1 bg-anarchist-black border border-anarchist-gray text-anarchist-white font-brutal text-sm p-2 focus:outline-none focus:border-anarchist-red"
             maxLength={500}
-            disabled={sending}
+            disabled={sending || !isConnected}
           />
           <button
-            onClick={sendMessage}
-            disabled={!newMessage.trim() || sending}
+            onClick={handleSendMessage}
+            disabled={!newMessage.trim() || sending || !isConnected}
             className="bg-anarchist-red hover:bg-red-700 disabled:bg-anarchist-gray disabled:opacity-50 text-anarchist-black font-brutal font-bold px-4 py-2 text-sm uppercase tracking-wider transition-colors"
           >
-            {sending ? 'SENDING...' : 'SEND'}
+            {sending ? '...' : '📤'}
           </button>
         </div>
         <div className="flex justify-between items-center mt-2">
           <span className="text-xs text-anarchist-gray">
-            {newMessage.length}/500
+            {typingUsers.length > 0 ? `${typingUsers[0]} is typing...` : `${newMessage.length}/500`}
           </span>
-          <span className="text-xs text-anarchist-gray">
-            DB Polling Mode
+          <span className="text-xs text-green-500 font-bold">
+            ⚡ Real-time WebSocket
           </span>
         </div>
       </div>
