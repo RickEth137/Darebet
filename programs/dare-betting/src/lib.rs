@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
+use std::str::FromStr;
 
 declare_id!("6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P");
 
@@ -360,6 +361,54 @@ pub mod dare_betting {
         
         Ok(())
     }
+
+    /// Emergency withdrawal function - ONLY for developer in critical situations
+    /// This allows the developer to withdraw all funds from a dare's pool
+    /// Use cases: Contract bug, stuck funds, security issue
+    pub fn emergency_withdraw(ctx: Context<EmergencyWithdraw>) -> Result<()> {
+        let dare = &mut ctx.accounts.dare;
+        
+        // CRITICAL: Only the hardcoded developer address can call this
+        const DEVELOPER_PUBKEY: &str = "9DvhKAT7bn5n7YqRTTAgvgnmtxPro1qiTaHkz4vzn1cK";
+        let developer_key = Pubkey::from_str(DEVELOPER_PUBKEY)
+            .map_err(|_| ErrorCode::InvalidDeveloperKey)?;
+        
+        require!(
+            ctx.accounts.developer.key() == developer_key,
+            ErrorCode::UnauthorizedEmergencyWithdrawal
+        );
+
+        // Get total pool balance
+        let pool_balance = ctx.accounts.pool_account.lamports();
+        
+        require!(pool_balance > 0, ErrorCode::EmptyPool);
+
+        // Transfer all SOL from pool to developer
+        let dare_key = dare.key();
+        let seeds = &[
+            b"pool",
+            dare_key.as_ref(),
+            &[ctx.bumps.pool_account],
+        ];
+        let signer = &[&seeds[..]];
+
+        let cpi_context = CpiContext::new_with_signer(
+            ctx.accounts.system_program.to_account_info(),
+            system_program::Transfer {
+                from: ctx.accounts.pool_account.to_account_info(),
+                to: ctx.accounts.developer.to_account_info(),
+            },
+            signer,
+        );
+        system_program::transfer(cpi_context, pool_balance)?;
+
+        // Mark dare as emergency withdrawn (optional flag)
+        dare.is_expired = true; // Repurpose this flag to prevent further actions
+
+        msg!("🚨 EMERGENCY WITHDRAWAL: {} SOL withdrawn by developer", pool_balance);
+
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -585,6 +634,26 @@ pub struct ApproveProof<'info> {
     pub platform_authority: Signer<'info>,
 }
 
+#[derive(Accounts)]
+pub struct EmergencyWithdraw<'info> {
+    #[account(mut)]
+    pub dare: Account<'info, Dare>,
+    
+    #[account(
+        mut,
+        seeds = [b"pool", dare.key().as_ref()],
+        bump
+    )]
+    /// CHECK: This is a PDA that holds SOL - will be drained in emergency
+    pub pool_account: AccountInfo<'info>,
+    
+    /// The developer wallet - hardcoded address check in function
+    #[account(mut)]
+    pub developer: Signer<'info>,
+    
+    pub system_program: Program<'info, System>,
+}
+
 #[account]
 pub struct Dare {
     pub creator: Pubkey,
@@ -744,4 +813,10 @@ pub enum ErrorCode {
     WinnersAlreadySelected,
     #[msg("Unauthorized platform authority")]
     UnauthorizedPlatformAuthority,
+    #[msg("Invalid developer key format")]
+    InvalidDeveloperKey,
+    #[msg("🚨 UNAUTHORIZED: Only developer can perform emergency withdrawal")]
+    UnauthorizedEmergencyWithdrawal,
+    #[msg("Pool is empty - nothing to withdraw")]
+    EmptyPool,
 }
