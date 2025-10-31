@@ -75,6 +75,7 @@ pub mod dare_betting {
         bet.bettor = ctx.accounts.bettor.key();
         bet.amount = amount;
         bet.bet_type = bet_type;
+        bet.bet_timestamp = Clock::get()?.unix_timestamp; // Store when bet was placed
         bet.is_claimed = false;
         bet.bump = ctx.bumps.bet;
 
@@ -272,10 +273,11 @@ pub mod dare_betting {
         require!(!dare.is_completed, ErrorCode::DareAlreadyCompleted);
         require!(current_time < dare.deadline, ErrorCode::DareExpired);
         
-        // Check if within 10 minutes (600 seconds) of deadline
+        // Check if within 10 minutes (600 seconds) of placing the bet
         let ten_minutes = 600;
+        let time_since_bet = current_time - bet.bet_timestamp;
         require!(
-            current_time < (dare.deadline - ten_minutes),
+            time_since_bet <= ten_minutes,
             ErrorCode::CashOutTooLate
         );
 
@@ -639,6 +641,7 @@ pub struct Bet {
     pub bettor: Pubkey,
     pub amount: u64,
     pub bet_type: BetType,
+    pub bet_timestamp: i64, // When the bet was placed
     pub is_claimed: bool,
     pub bump: u8,
 }
@@ -649,6 +652,7 @@ impl Bet {
         32 + // bettor
         8 + // amount
         1 + // bet_type
+        8 + // bet_timestamp
         1 + // is_claimed
         1; // bump
 }
@@ -724,7 +728,7 @@ pub enum ErrorCode {
     NotSubmitter,
     #[msg("Creator fee has already been claimed")]
     CreatorFeeAlreadyClaimed,
-    #[msg("Cannot cash out within 10 minutes of deadline")]
+    #[msg("Cash out window expired - only available for 10 minutes after placing bet")]
     CashOutTooLate,
     #[msg("No proof has been submitted")]
     NoProofSubmitted,
