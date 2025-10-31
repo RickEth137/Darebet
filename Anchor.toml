@@ -12,10 +12,10 @@ wallet = "~/.config/solana/id.json"
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
 
 [programs.localnet]
-dare_betting = "11111111111111111111111111111111"
+dare_betting = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P"
 
 [programs.devnet]
-dare_betting = "11111111111111111111111111111111"
+dare_betting = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P"
 
 [programs.mainnet]
-dare_betting = "11111111111111111111111111111111"
+dare_betting = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P"
