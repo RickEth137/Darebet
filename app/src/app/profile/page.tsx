@@ -75,8 +75,8 @@ export default function ProfilePage() {
       connecting 
     });
     
-    if (!userLoading) {
-      // Check if we have a user OR if we're connected (which should lead to user creation)
+    if (!userLoading && !connecting) {
+      // Only redirect if definitely not connected and not connecting
       if (!user && !connected) {
         console.log('Profile page: No user and not connected, redirecting to home');
         router.push('/');
@@ -86,18 +86,16 @@ export default function ProfilePage() {
       if (user) {
         console.log('Profile page: User found, loading user data');
         loadUserData();
-      } else if (connected) {
-        console.log('Profile page: Connected but no user yet, waiting...');
-        // Set loading to false to show the page while user is being created
-        setLoading(false);
+      } else if (connected && publicKey) {
+        console.log('Profile page: Connected but no user yet, waiting for auto-registration...');
+        // Keep loading state while user is being created/fetched
+        setLoading(true);
       } else {
-        console.log('Profile page: No user found and not connected');
+        console.log('Profile page: Setting loading to false');
         setLoading(false);
       }
-    } else {
-      console.log('Profile page: Still loading user, keeping loading state');
     }
-  }, [userLoading, isAuthenticated, user, connected, publicKey]);
+  }, [userLoading, isAuthenticated, user, connected, publicKey, connecting]);
 
   const loadUserData = async () => {
     if (!user) return;
@@ -179,7 +177,7 @@ export default function ProfilePage() {
     return bet.dare.isCompleted || Date.now() >= deadline.getTime() || bet.isClaimed || bet.isEarlyCashOut;
   });
 
-  if (userLoading || loading) {
+  if (userLoading || loading || (connected && !user && !userLoading)) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">

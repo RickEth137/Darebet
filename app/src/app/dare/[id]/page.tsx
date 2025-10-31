@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { PublicKey } from '@solana/web3.js';
 import { useDareProgram } from '@/hooks/useDareProgram';
 import { DareCard } from '@/components/DareCard';
@@ -234,12 +235,12 @@ export default function DareDetailsPage() {
               >
                 Try Again
               </button>
-              <button
-                onClick={() => router.push('/')}
-                className="bg-anarchist-charcoal hover:bg-gray-700 text-anarchist-offwhite px-6 py-2 font-brutal font-bold uppercase tracking-wider transition-colors border-2 border-anarchist-charcoal"
+              <Link
+                href="/"
+                className="inline-block bg-anarchist-charcoal hover:bg-gray-700 text-anarchist-offwhite px-6 py-2 font-brutal font-bold uppercase tracking-wider transition-colors border-2 border-anarchist-charcoal"
               >
                 Back to Home
-              </button>
+              </Link>
             </div>
           </div>
         </div>
@@ -257,12 +258,12 @@ export default function DareDetailsPage() {
             <p className="text-anarchist-offwhite font-brutal mb-6">
               The dare you&apos;re looking for doesn&apos;t exist or may have been removed.
             </p>
-            <button
-              onClick={() => router.push('/')}
-              className="bg-anarchist-red hover:bg-red-700 text-anarchist-black px-6 py-2 font-brutal font-bold uppercase tracking-wider transition-colors border-2 border-anarchist-red"
+            <Link
+              href="/"
+              className="inline-block bg-anarchist-red hover:bg-red-700 text-anarchist-black px-6 py-2 font-brutal font-bold uppercase tracking-wider transition-colors border-2 border-anarchist-red"
             >
               Back to Home
-            </button>
+            </Link>
           </div>
         </div>
       </div>
@@ -275,13 +276,13 @@ export default function DareDetailsPage() {
         <div className="max-w-7xl mx-auto">
           {/* Navigation */}
           <div className="mb-6">
-            <button
-              onClick={() => router.push('/')}
-              className="flex items-center text-anarchist-offwhite hover:text-anarchist-red transition-colors font-brutal uppercase tracking-wider"
+            <Link
+              href="/"
+              className="flex items-center text-anarchist-offwhite hover:text-anarchist-red transition-colors font-brutal uppercase tracking-wider cursor-pointer"
             >
               <span className="mr-2">←</span>
               Back to All Dares
-            </button>
+            </Link>
           </div>
 
           {/* Main Content - Three Column Layout */}
