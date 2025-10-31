@@ -5,9 +5,10 @@
   "description": "Solana-based dare betting platform",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.29.0",
