@@ -6,6 +6,7 @@ import Footer from '@/components/Footer';
 import { Toaster } from 'react-hot-toast';
 
 export const metadata = {
+  metadataBase: new URL('https://darebet.fun'),
   title: 'Dare Bets - Dare Betting Platform',
   description: 'A Solana-based platform where you can create dares and bet on outcomes',
   openGraph: {

@@ -581,9 +581,10 @@ export const DareCard: React.FC<DareCardProps> = ({ dare, onUpdate }) => {
           {(() => {
             const isCreator = dare.account.creator.toString() === publicKey.toString();
             const isCompleter = dare.account.completionProof?.submitter.toString() === publicKey.toString();
+            const hasFunds = dare.account.totalPool > 0;
             
-            const canClaimCreator = isCreator && !dare.account.creatorFeeClaimed;
-            const canClaimCompleter = isCompleter && !dare.account.completerFeeClaimed && dare.account.isCompleted;
+            const canClaimCreator = isCreator && !dare.account.creatorFeeClaimed && hasFunds;
+            const canClaimCompleter = isCompleter && !dare.account.completerFeeClaimed && dare.account.isCompleted && hasFunds;
             const canClaimWinnings = hasBet && potentialWinnings > 0 && !allWinningsClaimed;
             
             const canClaimAnything = canClaimCreator || canClaimCompleter || canClaimWinnings;
@@ -592,6 +593,7 @@ export const DareCard: React.FC<DareCardProps> = ({ dare, onUpdate }) => {
             let buttonText = 'NO CLAIM AVAILABLE';
             if (isLoading) buttonText = 'CLAIMING...';
             else if (canClaimCreator) buttonText = 'CLAIM CREATOR FEE (2%)';
+            else if (isCreator && !dare.account.creatorFeeClaimed && !hasFunds) buttonText = 'NO CREATOR FEE (0 SOL)';
             else if (canClaimCompleter) buttonText = 'CLAIM REWARD (50%)';
             else if (canClaimWinnings) buttonText = `CLAIM WINNINGS (${(potentialWinnings / 1e9).toFixed(4)} SOL)`;
             else if (allWinningsClaimed) buttonText = 'WINNINGS CLAIMED';
