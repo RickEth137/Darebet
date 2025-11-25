@@ -8,6 +8,29 @@ import { Toaster } from 'react-hot-toast';
 export const metadata = {
   title: 'Dare Bets - Dare Betting Platform',
   description: 'A Solana-based platform where you can create dares and bet on outcomes',
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://darebet.fun',
+    siteName: 'DareBet',
+    title: 'Dare Bets - Dare Betting Platform',
+    description: 'A Solana-based platform where you can create dares and bet on outcomes',
+    images: [
+      {
+        url: 'https://darebet.fun/images/og-default.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'DareBet Platform',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Dare Bets - Dare Betting Platform',
+    description: 'A Solana-based platform where you can create dares and bet on outcomes',
+    images: ['https://darebet.fun/images/og-default.jpg'],
+    creator: '@darebetdotfun',
+  },
 };
 
 export default function RootLayout({
