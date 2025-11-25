@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { MOCK_DARE_IDS } from '@/lib/mockDares';
 
 const prisma = new PrismaClient();
 
@@ -91,44 +90,8 @@ export async function GET(
       // Continue to check if we should return mock data
     }
 
-    console.log('[Submissions API] No real submissions found, checking for mock data');
-    // Only return mock data if:
-    // 1. This is a mock dare ID
-    // 2. AND there are no real submissions in the database
-    if (MOCK_DARE_IDS.includes(params.dareId)) {
-      console.log('[Submissions API] This is a mock dare ID, returning mock/empty data');
-      // Special handling for the cemetery dare mock data
-      if (params.dareId === 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA') {
-        return NextResponse.json({
-          submissions: [
-            {
-              id: 'mock-submission-1',
-              dareId: params.dareId,
-              ipfsHash: 'QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG',
-              description: 'Mock submission - I spent the entire night in the cemetery!',
-              createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-              likesCount: 42,
-              commentsCount: 15,
-              sharesCount: 8,
-              viewsCount: 234,
-              duration: 180,
-              submitter: {
-                walletAddress: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
-                username: 'CryptoWarrior',
-                avatar: null,
-              },
-            },
-          ],
-        });
-      }
-      
-      // Return empty for other mock dares
-      return NextResponse.json({
-        submissions: [],
-      });
-    }
-
-    console.log('[Submissions API] Not a mock dare, returning empty');
+    console.log('[Submissions API] No real submissions found');
+    
     // No submissions found
     return NextResponse.json({
       submissions: [],

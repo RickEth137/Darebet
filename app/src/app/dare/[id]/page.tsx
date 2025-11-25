@@ -13,7 +13,6 @@ import { BetFeed } from '@/components/BetFeed';
 import { ChatRoom } from '@/components/ChatRoom';
 import ContestantsSection from '@/components/dare/ContestantsSection';
 import { Dare } from '@/types';
-import { getMockDares } from '@/lib/mockDares';
 
 export default function DareDetailsPage() {
   const params = useParams();
@@ -57,16 +56,7 @@ export default function DareDetailsPage() {
       setLoading(true);
       setError(null);
       
-      // First check if this is a demo dare (try to get it from the mock data)
-      const demoDares = getMockDares();
-      const demoDare = demoDares.find(d => d.publicKey.toString() === dareId);
-      
-      if (demoDare) {
-        setDare(demoDare);
-        return;
-      }
-      
-      // If not a demo dare, try to fetch from API
+      // Try to fetch from API
       try {
         const allDares = await getDares();
         const foundDare = allDares.find(d => d.publicKey.toString() === dareId);

@@ -1,8 +1,79 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { db } from '@/lib/db';
 import { PinataService } from '@/lib/pinata';
 
-const prisma = new PrismaClient();
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const page = parseInt(searchParams.get('page') || '0');
+    const filter = searchParams.get('filter') || 'trending';
+
+    let orderBy: any = { createdAt: 'desc' };
+    if (filter === 'trending') {
+      orderBy = { likesCount: 'desc' };
+    }
+
+    const submissions = await db.proofSubmission.findMany({
+      take: limit,
+      skip: page * limit,
+      orderBy: orderBy,
+      include: {
+        user: {
+          select: {
+            username: true,
+            avatar: true,
+            walletAddress: true
+          }
+        },
+        dare: {
+          select: {
+            title: true,
+            onChainId: true,
+            deadline: true,
+            status: true
+          }
+        }
+      }
+    });
+
+    const formattedSubmissions = submissions.map(sub => ({
+      id: sub.id,
+      dareId: sub.dareId,
+      userId: sub.userId,
+      submitter: sub.submitter,
+      username: sub.user.username,
+      mediaUrl: sub.mediaUrl,
+      description: sub.description,
+      mediaType: sub.mediaType,
+      ipfsHash: sub.ipfsHash,
+      submittedAt: sub.submittedAt.toISOString(),
+      likesCount: sub.likesCount,
+      commentsCount: sub.commentsCount,
+      isLiked: false, // TODO: Implement user like check
+      dare: sub.dare ? {
+        title: sub.dare.title,
+        onChainId: sub.dare.onChainId || '',
+        deadline: sub.dare.deadline.toISOString(),
+        isCompleted: sub.dare.status === 'COMPLETED'
+      } : {
+        title: 'Unknown Dare',
+        onChainId: '',
+        deadline: new Date().toISOString(),
+        isCompleted: false
+      },
+      user: {
+        username: sub.user.username,
+        avatar: sub.user.avatar
+      }
+    }));
+
+    return NextResponse.json({ submissions: formattedSubmissions });
+  } catch (error) {
+    console.error('Error fetching submissions:', error);
+    return NextResponse.json({ error: 'Failed to fetch submissions' }, { status: 500 });
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -81,13 +152,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Find or create user
-    let user = await prisma.user.findUnique({
+    let user = await db.user.findUnique({
       where: { walletAddress },
     });
 
     if (!user) {
       // Create a default user for now
-      user = await prisma.user.create({
+      user = await db.user.create({
         data: {
           walletAddress,
           username: walletAddress.slice(0, 8),
@@ -96,7 +167,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Save to database
-    const proofSubmission = await prisma.proofSubmission.create({
+    const proofSubmission = await db.proofSubmission.create({
       data: {
         dareId,
         userId: user.id,

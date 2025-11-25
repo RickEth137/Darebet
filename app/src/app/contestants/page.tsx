@@ -43,71 +43,28 @@ export default function ContestantsFeedPage() {
   const loadSubmissions = async () => {
     try {
       setLoading(true);
-      // TODO: Replace with actual API call
-      const mockSubmissions: ContestantSubmission[] = [
-        {
-          id: '1',
-          dareId: 'dare1',
-          userId: 'user1',
-          submitter: 'ABC123...XYZ789',
-          username: 'daredevil_mike',
-          mediaUrl: 'https://via.placeholder.com/400x600/000000/FF0000?text=GHOST+PEPPER+VIDEO',
-          description: 'JUST DEMOLISHED 10 CAROLINA REAPERS IN 4:30! 🔥🔥🔥 NO WATER, NO MERCY! Check the timer! #DareComplete #GhostPepper',
-          mediaType: 'VIDEO',
-          ipfsHash: 'QmTest123',
-          submittedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-          likesCount: 847,
-          commentsCount: 156,
-          isLiked: false,
-          dare: {
-            title: 'EAT 10 GHOST PEPPERS IN 5 MINUTES',
-            onChainId: '11111111111111111111111111111111',
-            deadline: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-            isCompleted: false
-          },
-          user: {
-            username: 'daredevil_mike',
-            avatar: undefined
-          }
-        },
-        {
-          id: '2',
-          dareId: 'dare2',
-          userId: 'user2',
-          submitter: 'DEF456...UVW012',
-          username: 'bald_eagle_22',
-          mediaUrl: 'https://via.placeholder.com/400x600/FF0000/FFFFFF?text=SHAVED+HEAD+PROOF',
-          description: 'IT\'S DONE! Completely bald - head AND eyebrows! 30 days starts now. RIP my hair 😭 #BaldChallenge #NoRegrets',
-          mediaType: 'VIDEO',
-          ipfsHash: 'QmTest456',
-          submittedAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 mins ago
-          likesCount: 234,
-          commentsCount: 89,
-          isLiked: true,
-          dare: {
-            title: 'SHAVE HEAD AND EYEBROWS COMPLETELY',
-            onChainId: '22222222222222222222222222222222',
-            deadline: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-            isCompleted: false
-          },
-          user: {
-            username: 'bald_eagle_22',
-            avatar: undefined
-          }
-        }
-      ];
       
-      setSubmissions(mockSubmissions);
+      const response = await fetch(`/api/proof-submissions?filter=${filter}`);
+      const data = await response.json();
+      
+      if (data.submissions) {
+        setSubmissions(data.submissions);
+      } else {
+        setSubmissions([]);
+      }
     } catch (error) {
       console.error('Error loading submissions:', error);
+      setSubmissions([]);
     } finally {
       setLoading(false);
     }
   };
 
   const handleLike = async (submissionId: string) => {
+    if (!user) return;
+
     try {
-      // TODO: API call to like/unlike
+      // Optimistic update
       setSubmissions(prev => prev.map(sub => 
         sub.id === submissionId 
           ? { 
@@ -117,8 +74,39 @@ export default function ContestantsFeedPage() {
             }
           : sub
       ));
+
+      const response = await fetch(`/api/proof-submissions/${submissionId}/like`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: user.id }),
+      });
+
+      if (!response.ok) {
+        // Revert if failed
+        setSubmissions(prev => prev.map(sub => 
+          sub.id === submissionId 
+            ? { 
+                ...sub, 
+                isLiked: !sub.isLiked,
+                likesCount: sub.isLiked ? sub.likesCount - 1 : sub.likesCount + 1
+              }
+            : sub
+        ));
+      }
     } catch (error) {
       console.error('Error toggling like:', error);
+      // Revert if failed
+      setSubmissions(prev => prev.map(sub => 
+        sub.id === submissionId 
+          ? { 
+              ...sub, 
+              isLiked: !sub.isLiked,
+              likesCount: sub.isLiked ? sub.likesCount - 1 : sub.likesCount + 1
+            }
+          : sub
+      ));
     }
   };
 
@@ -188,7 +176,16 @@ export default function ContestantsFeedPage() {
 
           {/* Submissions Feed */}
           <div className="space-y-8">
-            {submissions.map((submission) => (
+            {submissions.length === 0 ? (
+              <div className="text-center py-16 bg-anarchist-charcoal border border-anarchist-red">
+                <div className="text-anarchist-red text-6xl mb-4">📭</div>
+                <h2 className="text-xl font-brutal font-bold text-anarchist-offwhite mb-2">NO SUBMISSIONS YET</h2>
+                <p className="text-anarchist-gray font-brutal">
+                  BE THE FIRST TO SUBMIT A DARE PROOF!
+                </p>
+              </div>
+            ) : (
+              submissions.map((submission) => (
               <div key={submission.id} className="bg-anarchist-charcoal border-2 border-anarchist-red overflow-hidden">
                 {/* Header */}
                 <div className="p-4 border-b border-anarchist-red">
@@ -293,7 +290,7 @@ export default function ContestantsFeedPage() {
                   </div>
                 </div>
               </div>
-            ))}
+            )))}
           </div>
 
           {/* Load More */}

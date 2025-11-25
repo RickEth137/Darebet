@@ -11,7 +11,6 @@ import { useDareApi } from '@/hooks/useDareApi';
 import { useUser } from '@/hooks/useUser';
 import { useSocket } from '@/contexts/SocketContext';
 import { Dare } from '@/types';
-import { getMockDares } from '@/lib/mockDares';
 
 export default function HomePage() {
   const { connection } = useConnection();
@@ -53,38 +52,26 @@ export default function HomePage() {
     }
   }, [socket, joinDaresList, leaveDaresList]);
 
-  // Mock data for demonstration
-  const createMockDares = (): Dare[] => {
-    return getMockDares();
-  };
-
   const loadDares = useCallback(async () => {
     console.log('[HomePage] loadDares called');
     
     setLoading(true);
     
     try {
-      // Always try to show mock data first for demo purposes
-      // In production, you'd only fetch from program
-      console.log('[HomePage] Using mock dares for demo');
-      const mockDares = createMockDares();
-      setDares(mockDares);
-      
-      // Optionally try to fetch real dares in background
+      // Fetch real dares from API
       console.log('[HomePage] Fetching real dares from API...');
-      getDares().then(fetchedDares => {
-        if (fetchedDares.length > 0) {
-          console.log('[HomePage] Fetched real dares:', fetchedDares.length);
-          setDares(fetchedDares);
-        }
-      }).catch(err => {
-        console.error('[HomePage] Failed to fetch real dares:', err);
-      });
+      const fetchedDares = await getDares();
+      
+      if (fetchedDares.length > 0) {
+        console.log('[HomePage] Fetched real dares:', fetchedDares.length);
+        setDares(fetchedDares);
+      } else {
+        console.log('[HomePage] No real dares found');
+        setDares([]);
+      }
     } catch (error) {
       console.error('[HomePage] Error loading dares:', error);
-      // Fallback to mock data on error
-      const mockDares = createMockDares();
-      setDares(mockDares);
+      setDares([]);
     } finally {
       setLoading(false);
     }
@@ -259,12 +246,12 @@ export default function HomePage() {
           </h2>
           <p className="text-anarchist-offwhite mb-8 max-w-md mx-auto font-brutal">
             CONNECT YOUR SOLANA WALLET TO CREATE DARES, PLACE BETS, AND JOIN THE CHAOS. 
-            PHANTOM, SOLFLARE, WALLETCONNECT SUPPORTED.
+            PHANTOM, METAMASK, WALLETCONNECT SUPPORTED.
           </p>
           <div className="bg-anarchist-charcoal border border-anarchist-red p-6 max-w-md mx-auto">
             <h3 className="font-semibold text-anarchist-red mb-2 font-brutal uppercase">NEW TO SOLANA?</h3>
             <p className="text-anarchist-offwhite text-sm font-brutal">
-              DOWNLOAD PHANTOM OR SOLFLARE WALLET TO GET STARTED WITH SOL.
+              DOWNLOAD PHANTOM OR METAMASK WALLET TO GET STARTED WITH SOL.
             </p>
           </div>
         </div>

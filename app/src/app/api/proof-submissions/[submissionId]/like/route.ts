@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { db } from '@/lib/db';
 
 export async function POST(
   request: NextRequest,
@@ -19,7 +17,7 @@ export async function POST(
     }
 
     // Get user wallet address
-    const user = await prisma.user.findUnique({
+    const user = await db.user.findUnique({
       where: { id: userId },
       select: { walletAddress: true },
     });
@@ -32,7 +30,7 @@ export async function POST(
     }
 
     // Check if already liked
-    const existingLike = await prisma.proofSubmissionLike.findFirst({
+    const existingLike = await db.proofSubmissionLike.findFirst({
       where: {
         proofSubmissionId: submissionId,
         userId,
@@ -41,12 +39,12 @@ export async function POST(
 
     if (existingLike) {
       // Unlike
-      await prisma.proofSubmissionLike.delete({
+      await db.proofSubmissionLike.delete({
         where: { id: existingLike.id },
       });
 
       // Decrement like count
-      const submission = await prisma.proofSubmission.update({
+      const submission = await db.proofSubmission.update({
         where: { id: submissionId },
         data: {
           likesCount: {
@@ -61,7 +59,7 @@ export async function POST(
       });
     } else {
       // Like
-      await prisma.proofSubmissionLike.create({
+      await db.proofSubmissionLike.create({
         data: {
           proofSubmissionId: submissionId,
           userId,
@@ -70,7 +68,7 @@ export async function POST(
       });
 
       // Increment like count
-      const submission = await prisma.proofSubmission.update({
+      const submission = await db.proofSubmission.update({
         where: { id: submissionId },
         data: {
           likesCount: {

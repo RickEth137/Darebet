@@ -165,16 +165,16 @@ export default function UserProfilePage() {
 
           <div className="p-6">
             <div className="flex items-start justify-between -mt-16 mb-6">
-              <div className="flex items-end space-x-4">
+              <div className="flex items-start space-x-4">
                 {/* Avatar */}
                 {profile.avatar ? (
                   <img 
                     src={profile.avatar} 
                     alt="Profile"
-                    className="w-32 h-32 rounded-full object-cover border-4 border-anarchist-black shadow-lg bg-anarchist-black"
+                    className="w-32 h-32 rounded-full object-cover border-4 border-anarchist-red shadow-lg bg-anarchist-black"
                   />
                 ) : (
-                  <div className="w-32 h-32 bg-anarchist-red rounded-full flex items-center justify-center text-anarchist-black text-4xl font-bold border-4 border-anarchist-black shadow-lg font-brutal">
+                  <div className="w-32 h-32 bg-anarchist-red rounded-full flex items-center justify-center text-anarchist-black text-4xl font-bold border-4 border-anarchist-red shadow-lg font-brutal">
                     {profile.username ? profile.username[0].toUpperCase() : '👤'}
                   </div>
                 )}

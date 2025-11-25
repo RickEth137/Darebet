@@ -5,7 +5,6 @@ import { useParams, useRouter } from 'next/navigation';
 import { PublicKey } from '@solana/web3.js';
 import { useDareApi } from '@/hooks/useDareApi';
 import { Dare } from '@/types';
-import { getMockDares } from '@/lib/mockDares';
 import DareProofSubmissions from '@/components/daretok/DareProofSubmissions';
 
 export default function DareTokPage() {
@@ -30,16 +29,7 @@ export default function DareTokPage() {
       setLoading(true);
       setError(null);
       
-      // First check if this is a demo dare (try to get it from the mock data)
-      const demoDares = getMockDares();
-      const demoDare = demoDares.find(d => d.publicKey.toString() === dareId);
-      
-      if (demoDare) {
-        setDare(demoDare);
-        return;
-      }
-      
-      // If not a demo dare, try to fetch from API
+      // Try to fetch from API
       try {
         const allDares = await getDares();
         const foundDare = allDares.find(d => d.publicKey.toString() === dareId);
