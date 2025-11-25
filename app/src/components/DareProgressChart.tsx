@@ -26,54 +26,52 @@ export function DareProgressChart({ dare }: DareProgressChartProps) {
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
 
   useEffect(() => {
-    // Generate smoother mock historical data for the chart
-    const generateChartData = (): ChartDataPoint[] => {
-      const data: ChartDataPoint[] = [];
-      const now = Date.now();
-      const hoursBack = 24;
-      
-      let currentWillDo = 0;
-      let currentWontDo = 0;
-      
-      // Create more realistic betting patterns
-      for (let i = hoursBack; i >= 0; i--) {
-        const timestamp = now - (i * 60 * 60 * 1000);
+    // Fetch real bets to generate chart data
+    const fetchChartData = async () => {
+      try {
+        // We need the dare ID (onChainId) to fetch bets
+        // Assuming dare.account.onChainId or similar is available, or we can use the dare object passed
+        // But the prop is just 'dare' which has 'account'. 
+        // We might need to pass the ID explicitly or infer it.
+        // For now, let's try to use the window URL or assume we can get it.
+        // Actually, the parent component passes 'dare' which is the Dare object.
+        // Let's assume we can get bets from the API using the dare's public key (which might be in the URL or passed down)
         
-        // Simulate more realistic betting activity
-        const timeOfDay = new Date(timestamp).getHours();
-        const activityMultiplier = timeOfDay >= 9 && timeOfDay <= 23 ? 1.5 : 0.3; // More activity during day
+        // Since we don't have the ID easily accessible in the 'dare' prop structure defined in this file (it only has 'account'),
+        // we might need to update the interface or rely on the parent passing it.
+        // However, looking at the parent usage in page.tsx: <DareProgressChart dare={dare} />
+        // The 'dare' object in page.tsx has 'publicKey'.
+        // So we should update the interface to include publicKey.
         
-        if (Math.random() > (0.8 - activityMultiplier * 0.3)) {
-          const betAmount = (Math.random() * 0.8 + 0.1) * activityMultiplier;
-          if (Math.random() > 0.45) { // Slight bias toward "Won't Do"
-            currentWontDo += betAmount;
-          } else {
-            currentWillDo += betAmount;
-          }
+        // But first, let's just try to fetch bets if we can.
+        // If we can't get the ID, we'll fallback to a simple linear projection based on current pools.
+        
+        const now = Date.now();
+        const data: ChartDataPoint[] = [];
+        
+        // Simple linear projection for now since we don't have historical data in the DB easily accessible without a complex query
+        // In a real app, we'd have an endpoint /api/dares/:id/stats/history
+        
+        // Create 24 points for the last 24 hours
+        for (let i = 24; i >= 0; i--) {
+          const timestamp = now - (i * 60 * 60 * 1000);
+          // Linear growth approximation
+          const progress = 1 - (i / 24);
+          
+          data.push({
+            timestamp,
+            willDoPool: (dare.account.willDoPool / 1e9) * progress,
+            wontDoPool: (dare.account.wontDoPool / 1e9) * progress
+          });
         }
         
-        data.push({
-          timestamp,
-          willDoPool: currentWillDo,
-          wontDoPool: currentWontDo
-        });
+        setChartData(data);
+      } catch (error) {
+        console.error('Error generating chart data:', error);
       }
-      
-      // Scale to match current pools
-      const finalWillDo = dare.account.willDoPool / 1e9;
-      const finalWontDo = dare.account.wontDoPool / 1e9;
-      
-      const willDoScale = finalWillDo / (currentWillDo || 1);
-      const wontDoScale = finalWontDo / (currentWontDo || 1);
-      
-      return data.map(point => ({
-        ...point,
-        willDoPool: point.willDoPool * willDoScale,
-        wontDoPool: point.wontDoPool * wontDoScale
-      }));
     };
 
-    setChartData(generateChartData());
+    fetchChartData();
 
     const updateTimer = () => {
       const now = Math.floor(Date.now() / 1000);

@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { z } from 'zod';
+import { verifyTransaction } from '@/lib/treasury';
 
 const BetSchema = z.object({
-  onChainId: z.string(),
+  onChainId: z.string().optional(),
   bettor: z.string(),
-  dareOnChainId: z.string(),
+  dareId: z.string().optional(), // Use internal ID
+  dareOnChainId: z.string().optional(), // Legacy/Hybrid
   amount: z.number(),
   betType: z.enum(['WILL_DO', 'WONT_DO']),
+  txSignature: z.string(), // Made required for verification
 });
 
 // Helper function to ensure user exists
@@ -33,23 +36,65 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = BetSchema.parse(body);
 
-    // Check if bet already exists
-    const existingBet = await db.bet.findUnique({
-      where: { onChainId: validatedData.onChainId }
-    });
-
-    if (existingBet) {
-      return NextResponse.json({ 
-        success: true, 
-        bet: existingBet,
-        message: 'Bet already exists' 
+    // 1. Verify Transaction Signature (CRITICAL FOR SECURITY)
+    if (validatedData.txSignature) {
+      // Check if signature already used
+      const existingTx = await db.bet.findFirst({
+        where: { txSignature: validatedData.txSignature }
       });
+
+      if (existingTx) {
+        return NextResponse.json(
+          { success: false, error: 'Transaction signature already used' },
+          { status: 400 }
+        );
+      }
+
+      // Verify on-chain
+      try {
+        await verifyTransaction(
+          validatedData.txSignature,
+          validatedData.amount,
+          validatedData.bettor
+        );
+      } catch (txError: any) {
+        console.error('Transaction verification failed:', txError);
+        return NextResponse.json(
+          { success: false, error: `Transaction verification failed: ${txError.message}` },
+          { status: 400 }
+        );
+      }
+    } else {
+      // In production, we should probably reject bets without signatures
+      // For now, we'll allow it if it's a legacy call, but the schema requires it now.
+      return NextResponse.json(
+        { success: false, error: 'Transaction signature required' },
+        { status: 400 }
+      );
+    }
+
+    // Check if bet already exists (only if onChainId provided)
+    if (validatedData.onChainId) {
+      const existingBet = await db.bet.findUnique({
+        where: { onChainId: validatedData.onChainId }
+      });
+
+      if (existingBet) {
+        return NextResponse.json({ 
+          success: true, 
+          bet: existingBet,
+          message: 'Bet already exists' 
+        });
+      }
     }
 
     // Find the dare
-    const dare = await db.dare.findUnique({
-      where: { onChainId: validatedData.dareOnChainId }
-    });
+    let dare;
+    if (validatedData.dareId) {
+      dare = await db.dare.findUnique({ where: { id: validatedData.dareId } });
+    } else if (validatedData.dareOnChainId) {
+      dare = await db.dare.findUnique({ where: { onChainId: validatedData.dareOnChainId } });
+    }
 
     if (!dare) {
       return NextResponse.json(
@@ -70,6 +115,8 @@ export async function POST(request: NextRequest) {
         dareId: dare.id,
         amount: validatedData.amount,
         betType: validatedData.betType,
+        txSignature: validatedData.txSignature,
+        status: 'PLACED',
         isClaimed: false,
         isEarlyCashOut: false,
         createdAt: new Date(),
@@ -83,6 +130,19 @@ export async function POST(request: NextRequest) {
             isCompleted: true,
           }
         }
+      }
+    });
+
+    // Update dare pools
+    const poolUpdate = validatedData.betType === 'WILL_DO' 
+      ? { willDoPool: { increment: validatedData.amount } }
+      : { wontDoPool: { increment: validatedData.amount } };
+
+    await db.dare.update({
+      where: { id: dare.id },
+      data: {
+        totalPool: { increment: validatedData.amount },
+        ...poolUpdate
       }
     });
 

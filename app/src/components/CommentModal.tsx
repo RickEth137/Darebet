@@ -22,9 +22,10 @@ interface Comment {
 interface CommentModalProps {
   dare: Dare;
   onClose: () => void;
+  onCommentAdded?: () => void;
 }
 
-export function CommentModal({ dare, onClose }: CommentModalProps) {
+export function CommentModal({ dare, onClose, onCommentAdded }: CommentModalProps) {
   const { publicKey } = useWallet();
   const [comments, setComments] = useState<Comment[]>([]);
   const [displayedComments, setDisplayedComments] = useState<Comment[]>([]);
@@ -41,7 +42,7 @@ export function CommentModal({ dare, onClose }: CommentModalProps) {
     const fetchComments = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/comments?dareId=${dare.publicKey.toString()}&page=0&limit=${COMMENTS_PER_PAGE}`);
+        const response = await fetch(`/api/comments?onChainId=${dare.publicKey.toString()}&page=0&limit=${COMMENTS_PER_PAGE}`);
         
         if (response.ok) {
           const data = await response.json();
@@ -50,19 +51,15 @@ export function CommentModal({ dare, onClose }: CommentModalProps) {
           setHasMore(data.hasMore);
         } else {
           console.error('Failed to fetch comments');
-          // Fallback to mock data if API fails
-          const mockComments = generateMockComments();
-          setComments(mockComments);
-          setDisplayedComments(mockComments.slice(0, COMMENTS_PER_PAGE));
-          setHasMore(mockComments.length > COMMENTS_PER_PAGE);
+          setComments([]);
+          setDisplayedComments([]);
+          setHasMore(false);
         }
       } catch (error) {
         console.error('Error fetching comments:', error);
-        // Fallback to mock data
-        const mockComments = generateMockComments();
-        setComments(mockComments);
-        setDisplayedComments(mockComments.slice(0, COMMENTS_PER_PAGE));
-        setHasMore(mockComments.length > COMMENTS_PER_PAGE);
+        setComments([]);
+        setDisplayedComments([]);
+        setHasMore(false);
       } finally {
         setLoading(false);
       }
@@ -77,7 +74,7 @@ export function CommentModal({ dare, onClose }: CommentModalProps) {
     setLoadingMore(true);
     try {
       const nextPage = page + 1;
-      const response = await fetch(`/api/comments?dareId=${dare.publicKey.toString()}&page=${nextPage}&limit=${COMMENTS_PER_PAGE}`);
+      const response = await fetch(`/api/comments?onChainId=${dare.publicKey.toString()}&page=${nextPage}&limit=${COMMENTS_PER_PAGE}`);
       
       if (response.ok) {
         const data = await response.json();
@@ -92,46 +89,7 @@ export function CommentModal({ dare, onClose }: CommentModalProps) {
     }
   };
 
-  // Fallback mock data generator
-  const generateMockComments = (): Comment[] => {
-    const mockUsers = [
-      { name: 'CryptoRebel', avatar: '🤘', wallet: 'CRYP...REBEL' },
-      { name: 'DareDevil_SOL', avatar: '💀', wallet: 'DARE...EVIL' },
-      { name: 'AnarchyBet', avatar: '⚡', wallet: 'ANAR...RCHY' },
-      { name: 'SolPunk', avatar: '🔥', wallet: 'SOLP...PUNK' },
-      { name: 'ChaosTrader', avatar: '⚠️', wallet: 'CHAO...ADER' },
-      { name: 'WildCard', avatar: '🃏', wallet: 'WILD...CARD' },
-    ];
 
-    const sampleComments = [
-      "This dare is absolutely insane! I love the chaos 🔥",
-      "No way anyone actually does this... betting WON'T DO",
-      "Hold my beer, this looks doable 💪",
-      "The risk/reward ratio is actually pretty good here",
-      "This is why I love this platform - pure madness!",
-    ];
-
-    const mockComments: Comment[] = [];
-    const now = Date.now();
-
-    for (let i = 0; i < 5; i++) {
-      const user = mockUsers[Math.floor(Math.random() * mockUsers.length)];
-      mockComments.push({
-        id: `mock-comment-${i}`,
-        author: user.name,
-        authorWallet: user.wallet,
-        content: sampleComments[Math.floor(Math.random() * sampleComments.length)],
-        timestamp: now - Math.floor(Math.random() * 86400000),
-        likes: Math.floor(Math.random() * 20),
-        isLiked: false,
-        replies: [],
-        avatar: user.avatar,
-        showReplies: false
-      });
-    }
-
-    return mockComments.sort((a, b) => b.timestamp - a.timestamp);
-  };
 
   const formatTimeAgo = (timestamp: number): string => {
     const now = Date.now();
@@ -203,7 +161,7 @@ export function CommentModal({ dare, onClose }: CommentModalProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          dareId: dare.publicKey.toString(),
+          onChainId: dare.publicKey.toString(),
           content: newComment,
           userWallet: publicKey.toString(),
           username: 'User', // Could be enhanced with actual username
@@ -215,6 +173,7 @@ export function CommentModal({ dare, onClose }: CommentModalProps) {
         setComments([newCommentObj, ...comments]);
         setDisplayedComments([newCommentObj, ...displayedComments]);
         setNewComment('');
+        onCommentAdded?.();
       } else {
         console.error('Failed to submit comment');
       }
@@ -233,7 +192,7 @@ export function CommentModal({ dare, onClose }: CommentModalProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          dareId: dare.publicKey.toString(),
+          onChainId: dare.publicKey.toString(),
           content: replyContent,
           userWallet: publicKey.toString(),
           username: 'User',
@@ -267,6 +226,7 @@ export function CommentModal({ dare, onClose }: CommentModalProps) {
         setDisplayedComments(addReplyToComment(displayedComments));
         setReplyContent('');
         setReplyingTo(null);
+        onCommentAdded?.();
       } else {
         console.error('Failed to submit reply');
       }

@@ -11,13 +11,18 @@ import Link from 'next/link';
 
 export default function Header() {
   const { connected, publicKey, disconnect } = useWallet();
-  const { user, isAuthenticated } = useUser();
+  const { user, isAuthenticated, shouldShowWelcome, dismissWelcome } = useUser();
   const [showWelcome, setShowWelcome] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 4)}...${address.slice(-4)}`;
+  };
+
+  const handleCloseWelcome = () => {
+    setShowWelcome(false);
+    dismissWelcome();
   };
 
   return (
@@ -51,17 +56,15 @@ export default function Header() {
                 BROWSE DARES
               </Link>
               <Link href="/contestants" className="text-anarchist-offwhite hover:text-anarchist-red px-3 py-2 text-sm font-brutal font-medium uppercase tracking-wider border-l-2 border-transparent hover:border-anarchist-red transition-colors">
-                CONTESTANTS
+                DARETOK
               </Link>
-              {isAuthenticated && (
-                <>
-                  <Link href="/profile" className="text-anarchist-offwhite hover:text-anarchist-red px-3 py-2 text-sm font-brutal font-medium uppercase tracking-wider border-l-2 border-transparent hover:border-anarchist-red transition-colors">
-                    MY PROFILE
-                  </Link>
-                  <Link href="/test-upload" className="text-anarchist-offwhite hover:text-anarchist-red px-3 py-2 text-sm font-brutal font-medium uppercase tracking-wider border-l-2 border-transparent hover:border-anarchist-red transition-colors">
-                    TEST UPLOAD
-                  </Link>
-                </>
+              <Link href="/live-dares" className="text-anarchist-offwhite hover:text-anarchist-red px-3 py-2 text-sm font-brutal font-medium uppercase tracking-wider border-l-2 border-transparent hover:border-anarchist-red transition-colors">
+                LIVE DARES
+              </Link>
+              {isAuthenticated && user?.username && (
+                <Link href={`/profile/${user.username}`} className="text-anarchist-offwhite hover:text-anarchist-red px-3 py-2 text-sm font-brutal font-medium uppercase tracking-wider border-l-2 border-transparent hover:border-anarchist-red transition-colors">
+                  MY PROFILE
+                </Link>
               )}
             </nav>
 
@@ -107,7 +110,7 @@ export default function Header() {
                         <p className="font-brutal font-bold text-anarchist-red uppercase tracking-wider">
                           {user.username || 'ANONYMOUS USER'}
                         </p>
-                        <p className="text-xs text-anarchist-offwhite font-brutal font-mono">
+                        <p className="text-xs text-anarchist-offwhite font-brutal">
                           {formatAddress(user.walletAddress)}
                         </p>
                         {user.bio && (
@@ -129,10 +132,10 @@ export default function Header() {
                         </div>
                       )}
                       <Link
-                        href="/profile"
+                        href={user.username ? `/profile/${user.username}` : '/profile'}
                         className="block px-4 py-2 text-sm text-anarchist-offwhite hover:bg-anarchist-charcoal hover:text-anarchist-red font-brutal uppercase tracking-wider transition-colors"
                       >
-                        VIEW PROFILE
+                        MY PROFILE
                       </Link>
                       <button
                         onClick={() => setShowWelcome(true)}
@@ -170,8 +173,8 @@ export default function Header() {
       </header>
 
       <WelcomeModal 
-        isOpen={showWelcome} 
-        onClose={() => setShowWelcome(false)} 
+        isOpen={showWelcome || shouldShowWelcome} 
+        onClose={handleCloseWelcome} 
       />
 
       {showUserMenu && (

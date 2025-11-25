@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { Program, AnchorProvider, web3, BN } from '@coral-xyz/anchor';
 import { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from '@solana/web3.js';
@@ -37,19 +37,32 @@ export const useDareProgram = () => {
     return new Program(idl as any, PROGRAM_ID, provider);
   }, [provider]);
 
-  const getDares = async (): Promise<Dare[]> => {
-    if (!program) return [];
-
-    try {
-      const accounts = await program.account.dare.all();
-      return accounts as Dare[];
-    } catch (error) {
-      console.error('Error fetching dares:', error);
+  const getDares = useCallback(async (): Promise<Dare[]> => {
+    if (!program) {
+      console.log('[useDareProgram] No program available');
       return [];
     }
-  };
 
-  const fetchDare = async (darePublicKey: PublicKey): Promise<Dare | null> => {
+    try {
+      console.log('[useDareProgram] Fetching dares from program...');
+      
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise<Dare[]>((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout fetching dares')), 5000)
+      );
+      
+      const fetchPromise = program.account.dare.all();
+      
+      const accounts = await Promise.race([fetchPromise, timeoutPromise]) as any[];
+      console.log('[useDareProgram] Fetched accounts:', accounts.length);
+      return accounts as Dare[];
+    } catch (error: any) {
+      console.error('[useDareProgram] Error fetching dares:', error.message || error);
+      return [];
+    }
+  }, [program]);
+
+  const fetchDare = useCallback(async (darePublicKey: PublicKey): Promise<Dare | null> => {
     if (!program) return null;
 
     try {
@@ -62,9 +75,9 @@ export const useDareProgram = () => {
       console.error('Error fetching dare:', error);
       return null;
     }
-  };
+  }, [program]);
 
-  const getUserBets = async (userPublicKey: PublicKey): Promise<Bet[]> => {
+  const getUserBets = useCallback(async (userPublicKey: PublicKey): Promise<Bet[]> => {
     if (!program) return [];
 
     try {
@@ -81,7 +94,7 @@ export const useDareProgram = () => {
       console.error('Error fetching user bets:', error);
       return [];
     }
-  };
+  }, [program]);
 
   const createDare = async (params: CreateDareParams): Promise<boolean> => {
     if (!program || !publicKey) {

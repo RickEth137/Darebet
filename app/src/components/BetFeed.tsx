@@ -24,87 +24,38 @@ export function BetFeed({ dareId }: BetFeedProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mock bet data for demonstration
-    const generateMockBets = (): Bet[] => {
-      const mockUsers = [
-        { name: 'DAREDEVIL_SOL', avatar: '💀' },
-        { name: 'GHOST_PEPPER_KING', avatar: '🌶️' }, 
-        { name: 'CEMETERY_WALKER', avatar: '⚰️' },
-        { name: 'BACKWARDS_LEGEND', avatar: '🔄' },
-        { name: 'MAYO_MANIAC', avatar: '🥄' },
-        { name: 'PIRATE_MASTER', avatar: '🏴‍☠️' },
-        { name: 'FEARLESS_EXPLORER', avatar: '🗺️' },
-        { name: 'BOLD_WARRIOR', avatar: '⚔️' },
-        { name: 'REVERSE_REBEL', avatar: '↩️' },
-        { name: 'CONDIMENT_KING', avatar: '👑' },
-        { name: 'CRYPTO_ANARCHIST', avatar: '⚡' },
-        { name: 'VOID_WALKER', avatar: '🌙' },
-        { name: 'STORM_BREAKER', avatar: '⛈️' },
-        { name: 'CHAOS_TRADER', avatar: '🃏' },
-        { name: 'NIGHT_RIDER', avatar: '🏍️' }
-      ];
-
-      const mockBets: Bet[] = [];
-      const now = Date.now();
-
-      // Generate 20-30 recent bets
-      for (let i = 0; i < 25; i++) {
-        const randomUser = mockUsers[Math.floor(Math.random() * mockUsers.length)];
-        const randomAmount = parseFloat((Math.random() * 1.5 + 0.05).toFixed(3)); // 0.05 to 1.55 SOL
-        const randomType = Math.random() > 0.55 ? 'willDo' : 'wontDo'; // Slight bias toward won't do
-        const timeAgo = Math.floor(Math.random() * 14400) + 60; // 1 minute to 4 hours ago
-        const multiplier = parseFloat((Math.random() * 1.5 + 1.2).toFixed(2)); // 1.2x to 2.7x
-
-        mockBets.push({
-          id: `bet-${i}`,
-          amount: randomAmount,
-          betType: randomType,
-          timestamp: now - (timeAgo * 1000),
-          username: randomUser.name,
-          wallet: `${randomUser.name.slice(0, 4)}...${randomUser.name.slice(-4)}`,
-          txHash: `${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
-          avatar: randomUser.avatar,
-          multiplier
-        });
+    const fetchBets = async () => {
+      try {
+        // Fetch real bets from API
+        // We use dareOnChainId because the prop passed is likely the public key string
+        const response = await fetch(`/api/bets?dareOnChainId=${dareId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+          const realBets = data.data.map((bet: any) => ({
+            id: bet.id,
+            amount: bet.amount,
+            betType: bet.betType === 'WILL_DO' ? 'willDo' : 'wontDo',
+            timestamp: new Date(bet.createdAt).getTime(),
+            username: bet.user?.username || 'Anonymous',
+            wallet: bet.user?.walletAddress ? `${bet.user.walletAddress.slice(0, 4)}...${bet.user.walletAddress.slice(-4)}` : 'Unknown',
+            txHash: bet.txSignature ? `${bet.txSignature.slice(0, 6)}...` : 'PENDING',
+            avatar: '👤', // Default avatar for now
+            multiplier: 1.96 // Standard multiplier (approx 2x minus fees)
+          }));
+          setBets(realBets);
+        }
+      } catch (error) {
+        console.error('Error fetching bets:', error);
+      } finally {
+        setLoading(false);
       }
-
-      // Sort by timestamp (newest first)
-      return mockBets.sort((a, b) => b.timestamp - a.timestamp);
     };
 
-    // Simulate loading delay
-    setTimeout(() => {
-      setBets(generateMockBets());
-      setLoading(false);
-    }, 800);
-
-    // Add new bets periodically to simulate live activity
-    const interval = setInterval(() => {
-      if (Math.random() > 0.75) { // 25% chance every 4 seconds
-        const mockUsers = [
-          { name: 'CRYPTO_PUNK', avatar: '🤘' },
-          { name: 'SOL_LEGEND', avatar: '☀️' },
-          { name: 'DARE_MASTER', avatar: '💎' },
-          { name: 'WILD_CARD', avatar: '🎰' }
-        ];
-        
-        const user = mockUsers[Math.floor(Math.random() * mockUsers.length)];
-        const newBet: Bet = {
-          id: `bet-${Date.now()}`,
-          amount: parseFloat((Math.random() * 0.8 + 0.05).toFixed(3)),
-          betType: Math.random() > 0.5 ? 'wontDo' : 'willDo',
-          timestamp: Date.now(),
-          username: user.name,
-          wallet: `${user.name.slice(0, 4)}...${user.name.slice(-4)}`,
-          txHash: `${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
-          avatar: user.avatar,
-          multiplier: parseFloat((Math.random() * 1.0 + 1.5).toFixed(2))
-        };
-
-        setBets(prevBets => [newBet, ...prevBets.slice(0, 29)]); // Keep last 30 bets
-      }
-    }, 4000);
-
+    fetchBets();
+    
+    // Poll for new bets every 10 seconds
+    const interval = setInterval(fetchBets, 10000);
     return () => clearInterval(interval);
   }, [dareId]);
 

@@ -85,11 +85,11 @@ const UserProofSubmissions: React.FC<UserProofSubmissionsProps> = ({
 
   if (loading) {
     return (
-      <div className="bg-gray-900 rounded-lg p-6">
-        {showTitle && <h3 className="text-xl font-bold text-white mb-4">Dare Submissions</h3>}
+      <div className="bg-anarchist-black border-2 border-anarchist-red p-6">
+        {showTitle && <h3 className="text-xl font-brutal font-bold text-anarchist-red mb-4 uppercase tracking-wider">DARE SUBMISSIONS</h3>}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="animate-pulse bg-gray-800 rounded-lg h-48"></div>
+            <div key={i} className="animate-pulse bg-anarchist-charcoal h-48 border border-anarchist-red"></div>
           ))}
         </div>
       </div>
@@ -98,9 +98,9 @@ const UserProofSubmissions: React.FC<UserProofSubmissionsProps> = ({
 
   if (error) {
     return (
-      <div className="bg-gray-900 rounded-lg p-6">
-        {showTitle && <h3 className="text-xl font-bold text-white mb-4">Dare Submissions</h3>}
-        <div className="text-red-400 text-center py-8">
+      <div className="bg-anarchist-black border-2 border-anarchist-red p-6">
+        {showTitle && <h3 className="text-xl font-brutal font-bold text-anarchist-red mb-4 uppercase tracking-wider">DARE SUBMISSIONS</h3>}
+        <div className="text-anarchist-red text-center py-8 font-brutal">
           {error}
         </div>
       </div>
@@ -109,12 +109,12 @@ const UserProofSubmissions: React.FC<UserProofSubmissionsProps> = ({
 
   if (submissions.length === 0) {
     return (
-      <div className="bg-gray-900 rounded-lg p-6">
-        {showTitle && <h3 className="text-xl font-bold text-white mb-4">Dare Submissions</h3>}
+      <div className="bg-anarchist-black border-2 border-anarchist-red p-6">
+        {showTitle && <h3 className="text-xl font-brutal font-bold text-anarchist-red mb-4 uppercase tracking-wider">DARE SUBMISSIONS</h3>}
         <div className="text-center py-12">
-          <div className="text-gray-400 text-lg mb-2">No submissions yet</div>
-          <div className="text-gray-500 text-sm">
-            {username === currentUserId ? "You haven't completed any dares yet" : "This user hasn't completed any dares yet"}
+          <div className="text-anarchist-offwhite text-lg mb-2 font-brutal">NO SUBMISSIONS YET</div>
+          <div className="text-anarchist-gray text-sm font-brutal">
+            {username === currentUserId ? "YOU HAVEN'T COMPLETED ANY DARES YET" : "THIS USER HASN'T COMPLETED ANY DARES YET"}
           </div>
         </div>
       </div>
@@ -122,11 +122,11 @@ const UserProofSubmissions: React.FC<UserProofSubmissionsProps> = ({
   }
 
   return (
-    <div className="bg-gray-900 rounded-lg p-6">
+    <div className="bg-anarchist-black border-2 border-anarchist-red p-6">
       {showTitle && (
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-bold text-white">
-            Dare Submissions ({submissions.length})
+          <h3 className="text-xl font-brutal font-bold text-anarchist-red uppercase tracking-wider">
+            DARE SUBMISSIONS ({submissions.length})
           </h3>
         </div>
       )}
@@ -135,10 +135,10 @@ const UserProofSubmissions: React.FC<UserProofSubmissionsProps> = ({
         {submissions.map((submission) => (
           <div
             key={submission.id}
-            className="bg-gray-800 rounded-lg overflow-hidden group hover:scale-105 transition-all duration-200"
+            className="bg-anarchist-charcoal border border-anarchist-red overflow-hidden group hover:border-anarchist-offwhite transition-all duration-200"
           >
             {/* Video thumbnail */}
-            <div className="relative aspect-video bg-gray-700 overflow-hidden">
+            <div className="relative aspect-video bg-black overflow-hidden">
               <video
                 src={getIpfsVideoUrl(submission.ipfsHash)}
                 className="w-full h-full object-cover"
@@ -152,21 +152,21 @@ const UserProofSubmissions: React.FC<UserProofSubmissionsProps> = ({
               
               {/* Play overlay */}
               <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="bg-white bg-opacity-20 rounded-full p-3">
-                  <Play className="w-6 h-6 text-white fill-current" />
+                <div className="bg-anarchist-red bg-opacity-80 rounded-full p-3">
+                  <Play className="w-6 h-6 text-anarchist-black fill-current" />
                 </div>
               </div>
 
               {/* Duration */}
               {submission.duration && (
-                <div className="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded">
+                <div className="absolute bottom-2 right-2 bg-black bg-opacity-75 text-anarchist-offwhite text-xs px-2 py-1 font-brutal">
                   {formatDuration(submission.duration)}
                 </div>
               )}
 
               {/* Category badge */}
               <div className="absolute top-2 left-2">
-                <span className={`${getCategoryColor(submission.dare.category)} text-white text-xs px-2 py-1 rounded-full font-medium`}>
+                <span className={`${getCategoryColor(submission.dare.category)} text-white text-xs px-2 py-1 font-brutal font-bold uppercase tracking-wider border border-black`}>
                   {submission.dare.category}
                 </span>
               </div>
@@ -177,28 +177,28 @@ const UserProofSubmissions: React.FC<UserProofSubmissionsProps> = ({
               {/* Dare title */}
               <Link 
                 href={`/dares/${submission.dareId}`}
-                className="block hover:text-purple-400 transition-colors"
+                className="block hover:text-anarchist-red transition-colors"
               >
-                <h4 className="font-semibold text-white text-sm mb-2 line-clamp-2">
+                <h4 className="font-brutal font-bold text-anarchist-offwhite text-sm mb-2 line-clamp-2 uppercase tracking-wider">
                   {submission.dare.title}
                 </h4>
               </Link>
 
               {/* Description */}
               {submission.description && (
-                <p className="text-gray-400 text-xs mb-3 line-clamp-2">
+                <p className="text-anarchist-gray text-xs mb-3 line-clamp-2 font-brutal">
                   {submission.description}
                 </p>
               )}
 
               {/* Date */}
-              <div className="flex items-center text-gray-500 text-xs mb-3">
+              <div className="flex items-center text-anarchist-gray text-xs mb-3 font-brutal">
                 <Calendar className="w-3 h-3 mr-1" />
-                {formatDistanceToNow(new Date(submission.createdAt), { addSuffix: true })}
+                {formatDistanceToNow(new Date(submission.createdAt), { addSuffix: true }).toUpperCase()}
               </div>
 
               {/* Engagement stats */}
-              <div className="flex items-center justify-between text-gray-400 text-xs">
+              <div className="flex items-center justify-between text-anarchist-gray text-xs font-brutal">
                 <div className="flex items-center space-x-3">
                   <div className="flex items-center space-x-1">
                     <Heart className="w-3 h-3" />
@@ -218,9 +218,9 @@ const UserProofSubmissions: React.FC<UserProofSubmissionsProps> = ({
 
                 <Link 
                   href={`/dares/${submission.dareId}/submission/${submission.id}`}
-                  className="text-purple-400 hover:text-purple-300 transition-colors text-xs font-medium"
+                  className="text-anarchist-red hover:text-anarchist-offwhite transition-colors text-xs font-bold uppercase tracking-wider"
                 >
-                  View Details
+                  VIEW DETAILS
                 </Link>
               </div>
             </div>

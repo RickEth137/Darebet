@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useUser } from '@/hooks/useUser';
 
 interface WelcomeModalProps {
@@ -9,21 +9,35 @@ interface WelcomeModalProps {
 }
 
 export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) => {
-  const { registerUser } = useUser();
+  const { registerUser, updateUser, refreshUser, user } = useUser();
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
   const [avatar, setAvatar] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [banner, setBanner] = useState<File | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [usernameError, setUsernameError] = useState('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
 
   const DEFAULT_AVATAR = 'https://brown-traditional-sheep-998.mypinata.cloud/ipfs/bafkreihpfyvyryphyedr44zteziu3d3hbq47cekhre5c5zjjyn6w3ezttq';
 
+  // Pre-fill form when editing existing profile
+  useEffect(() => {
+    if (user && isOpen) {
+      setUsername(user.username || '');
+      setBio(user.bio || '');
+      setAvatarPreview(user.avatar || null);
+      setBannerPreview(user.banner || null);
+    }
+  }, [user, isOpen]);
+
   const validateUsername = (value: string) => {
+    // Username is now optional - only validate if provided
     if (!value) {
-      setUsernameError('Username is required');
-      return false;
+      setUsernameError('');
+      return true;
     }
     if (value.length < 3) {
       setUsernameError('Username must be at least 3 characters');
@@ -67,9 +81,40 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) =
     reader.readAsDataURL(file);
   };
 
-  const uploadAvatarToPinata = async (file: File): Promise<string | null> => {
+  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 10MB for banner)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Banner must be less than 10MB');
+      return;
+    }
+
+    setBanner(file);
+    
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setBannerPreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const uploadFileToPinata = async (file: File, isAvatar: boolean = true): Promise<string | null> => {
     try {
-      setUploadingAvatar(true);
+      if (isAvatar) {
+        setUploadingAvatar(true);
+      } else {
+        setUploadingBanner(true);
+      }
+      
       const formData = new FormData();
       formData.append('file', file);
 
@@ -87,10 +132,14 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) =
         return null;
       }
     } catch (error) {
-      console.error('Error uploading avatar:', error);
+      console.error(`Error uploading ${isAvatar ? 'avatar' : 'banner'}:`, error);
       return null;
     } finally {
-      setUploadingAvatar(false);
+      if (isAvatar) {
+        setUploadingAvatar(false);
+      } else {
+        setUploadingBanner(false);
+      }
     }
   };
 
@@ -99,41 +148,68 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) =
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateUsername(username)) {
+    // Only validate username if provided
+    if (username && !validateUsername(username)) {
       return;
     }
 
     setIsLoading(true);
 
-    // Upload avatar if provided
-    let avatarUrl = DEFAULT_AVATAR;
+    // Determine if we're updating existing profile or creating new
+    const isUpdating = !!user;
+
+    // Upload avatar if provided (new file selected)
+    let avatarUrl = user?.avatar || DEFAULT_AVATAR;
     if (avatar) {
-      const uploadedUrl = await uploadAvatarToPinata(avatar);
+      const uploadedUrl = await uploadFileToPinata(avatar, true);
       if (uploadedUrl) {
         avatarUrl = uploadedUrl;
       } else {
-        alert('Failed to upload avatar. Using default image.');
+        alert('Failed to upload avatar.');
       }
     }
 
-    const success = await registerUser(
-      username.trim(), 
-      bio.trim() || undefined,
-      undefined, // email removed
-      avatarUrl
-    );
+    // Upload banner if provided (new file selected)
+    let bannerUrl = user?.banner;
+    if (banner) {
+      const uploadedUrl = await uploadFileToPinata(banner, false);
+      if (uploadedUrl) {
+        bannerUrl = uploadedUrl;
+      } else {
+        alert('Failed to upload banner.');
+      }
+    }
+
+    let success;
+    if (isUpdating) {
+      // Update existing profile
+      success = await updateUser(
+        username.trim() || undefined,
+        bio.trim() || undefined,
+        undefined, // email
+        avatarUrl,
+        bannerUrl
+      );
+    } else {
+      // Create new profile
+      success = await registerUser(
+        username.trim() || undefined, 
+        bio.trim() || undefined,
+        undefined, // email removed
+        avatarUrl,
+        bannerUrl
+      );
+    }
 
     if (success) {
+      // Refresh user data to update UI immediately
+      await refreshUser();
       onClose();
     }
     setIsLoading(false);
   };
 
-  const handleSkip = async () => {
-    // For now, we require username - users can't skip
-    // This could be changed in the future if needed
-    return;
-  };
+  const isEditing = user?.username;
 
   return (
     <div className="fixed inset-0 bg-anarchist-black bg-opacity-90 flex items-center justify-center p-4 z-50">
@@ -142,17 +218,21 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) =
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 text-anarchist-red hover:text-anarchist-white font-brutal text-xl font-bold w-8 h-8 flex items-center justify-center border border-anarchist-red hover:bg-anarchist-red hover:text-anarchist-black transition-colors"
+          className="absolute top-4 right-4 text-anarchist-red font-brutal text-xl font-bold w-8 h-8 flex items-center justify-center border border-anarchist-red hover:bg-anarchist-red hover:text-anarchist-black transition-colors"
           aria-label="Close modal"
         >
           ×
         </button>
         
         <div className="text-center mb-6">
-          <div className="text-4xl mb-4 text-anarchist-red font-brutal">[SETUP]</div>
-          <h2 className="text-2xl font-brutal font-bold text-anarchist-red mb-2 uppercase tracking-wider">WELCOME TO DARE BETS</h2>
+          <div className="text-4xl mb-4 text-anarchist-red font-brutal">{isEditing ? '[EDIT]' : '[SETUP]'}</div>
+          <h2 className="text-2xl font-brutal font-bold text-anarchist-red mb-2 uppercase tracking-wider">
+            {isEditing ? 'EDIT PROFILE' : 'WELCOME TO DARE BETS'}
+          </h2>
           <p className="text-anarchist-offwhite font-brutal">
-            THE ULTIMATE SOLANA DARE BETTING PLATFORM. SETUP YOUR PROFILE TO ACCESS THE SYSTEM.
+            {isEditing 
+              ? 'UPDATE YOUR PROFILE DETAILS BELOW.' 
+              : 'THE ULTIMATE SOLANA DARE BETTING PLATFORM. SETUP YOUR PROFILE TO ACCESS THE SYSTEM.'}
           </p>
         </div>
 
@@ -191,9 +271,49 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) =
             </div>
           </div>
 
+          {/* Banner Upload */}
           <div>
             <label className="block text-sm font-brutal font-bold text-anarchist-red mb-2 uppercase tracking-wider">
-              USERNAME *
+              PROFILE BANNER (OPTIONAL)
+            </label>
+            <div className="space-y-3">
+              <div className="w-full h-32 overflow-hidden bg-anarchist-charcoal border-2 border-anarchist-red">
+                {bannerPreview ? (
+                  <img 
+                    src={bannerPreview}
+                    alt="Banner preview"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-anarchist-gray">
+                    <span className="font-brutal text-sm">NO BANNER SELECTED</span>
+                  </div>
+                )}
+              </div>
+              <div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleBannerChange}
+                  className="hidden"
+                  id="banner-upload"
+                />
+                <label
+                  htmlFor="banner-upload"
+                  className="cursor-pointer bg-anarchist-red hover:bg-anarchist-darkred text-anarchist-black px-4 py-2 text-sm font-brutal font-bold transition-colors inline-block uppercase tracking-wider border border-anarchist-red"
+                >
+                  CHOOSE BANNER
+                </label>
+                <p className="text-xs text-anarchist-offwhite mt-1 font-brutal">
+                  MAX 10MB. RECOMMENDED 1200x400. JPG, PNG, GIF SUPPORTED.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-brutal font-bold text-anarchist-red mb-2 uppercase tracking-wider">
+              USERNAME (OPTIONAL)
             </label>
             <input
               type="text"
@@ -207,13 +327,12 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) =
               }`}
               placeholder="CHOOSE A UNIQUE USERNAME"
               maxLength={20}
-              required
             />
             {usernameError && (
               <p className="text-anarchist-red text-xs mt-1 font-brutal">{usernameError}</p>
             )}
             <p className="text-xs text-anarchist-offwhite mt-1 font-brutal">
-              THIS CANNOT BE CHANGED LATER. ONLY LETTERS, NUMBERS, AND UNDERSCORES ALLOWED.
+              IF PROVIDED, CANNOT BE CHANGED LATER. ONLY LETTERS, NUMBERS, AND UNDERSCORES.
             </p>
           </div>
 
@@ -247,17 +366,17 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose }) =
           <div className="flex space-x-3 pt-4">
             <button
               type="submit"
-              disabled={isLoading || uploadingAvatar || !username || usernameError !== ''}
+              disabled={isLoading || uploadingAvatar || uploadingBanner || usernameError !== ''}
               className="w-full bg-anarchist-red hover:bg-red-700 disabled:bg-anarchist-charcoal text-anarchist-black disabled:text-anarchist-offwhite py-2 px-4 font-brutal font-bold uppercase tracking-wider border-2 border-anarchist-red transition-colors"
             >
-              {isLoading ? 'CREATING ACCOUNT...' : uploadingAvatar ? 'UPLOADING IMAGE...' : 'COMPLETE SETUP'}
+              {isLoading ? 'SAVING PROFILE...' : (uploadingAvatar || uploadingBanner) ? 'UPLOADING...' : (isEditing ? 'SAVE CHANGES' : 'CONTINUE')}
             </button>
           </div>
         </form>
 
         <div className="mt-4 pt-4 border-t border-anarchist-red text-center">
           <p className="text-xs text-anarchist-offwhite font-brutal">
-            USERNAME CANNOT BE CHANGED AFTER CREATION. BY CONTINUING, YOU AGREE TO OUR TERMS OF SERVICE AND PRIVACY POLICY.
+            ALL FIELDS ARE OPTIONAL. YOU CAN SKIP AND COMPLETE YOUR PROFILE LATER. BY CONTINUING, YOU AGREE TO OUR TERMS OF SERVICE.
           </p>
         </div>
       </div>

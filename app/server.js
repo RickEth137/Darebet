@@ -87,6 +87,26 @@ app.prepare().then(() => {
       socket.to(`dare-${dareId}`).emit('user-stop-typing', { userId });
     });
 
+    // Dare update events - broadcast to all users viewing any dare
+    socket.on('dare-updated', ({ dareId, updateType }) => {
+      console.log(`Dare ${dareId} updated: ${updateType}`);
+      // Broadcast to the specific dare room AND to a global "dares" room
+      io.to(`dare-${dareId}`).emit('dare-data-changed', { dareId, updateType });
+      io.to('dares-list').emit('dare-data-changed', { dareId, updateType });
+    });
+
+    // Join the global dares list room (for main page, profile pages, etc.)
+    socket.on('join-dares-list', () => {
+      socket.join('dares-list');
+      console.log(`Client ${socket.id} joined dares-list room`);
+    });
+
+    // Leave dares list room
+    socket.on('leave-dares-list', () => {
+      socket.leave('dares-list');
+      console.log(`Client ${socket.id} left dares-list room`);
+    });
+
     // Handle disconnect
     socket.on('disconnect', () => {
       console.log('Client disconnected:', socket.id);

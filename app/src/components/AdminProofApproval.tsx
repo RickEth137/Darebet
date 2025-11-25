@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useDareProgram } from '@/hooks/useDareProgram';
+import { useDareApi } from '@/hooks/useDareApi';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { Dare } from '@/types';
@@ -18,7 +18,7 @@ export const AdminProofApproval: React.FC<AdminProofApprovalProps> = ({
   dare,
   onApprovalUpdate
 }) => {
-  const { approveProof } = useDareProgram();
+  const { approveProof } = useDareApi();
   const { publicKey } = useWallet();
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -61,7 +61,7 @@ export const AdminProofApproval: React.FC<AdminProofApprovalProps> = ({
       <div className="bg-anarchist-black border border-anarchist-gray p-4 mb-4">
         <div className="mb-3">
           <p className="text-sm font-brutal text-anarchist-gray uppercase tracking-wider mb-1">Submitter</p>
-          <p className="font-brutal text-anarchist-white font-mono">
+          <p className="font-brutal text-anarchist-white">
             {completionProof.submitter.toString()}
           </p>
         </div>
@@ -75,7 +75,7 @@ export const AdminProofApproval: React.FC<AdminProofApprovalProps> = ({
         
         <div className="mb-3">
           <p className="text-sm font-brutal text-anarchist-gray uppercase tracking-wider mb-1">Proof Hash</p>
-          <p className="font-brutal text-anarchist-white font-mono text-sm break-all">
+          <p className="font-brutal text-anarchist-white text-sm break-all">
             {completionProof.proofHash}
           </p>
         </div>

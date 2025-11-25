@@ -1,9 +1,18 @@
 'use client';
 
-import { useState } from 'react';
-import { useDareProgram } from '@/hooks/useDareProgram';
+import { useState, useEffect } from 'react';
+import { useDareApi } from '@/hooks/useDareApi';
 import PinataService from '@/lib/pinata';
 import toast from 'react-hot-toast';
+import { GiphyFetch } from '@giphy/js-fetch-api';
+import { Grid } from '@giphy/react-components';
+
+// Initialize Giphy
+const GIPHY_KEY = process.env.NEXT_PUBLIC_GIPHY_API_KEY === 'YOUR_GIPHY_API_KEY_HERE' 
+  ? 'sXpGFDGZs0Dv1mmNFvYaGUvYwKX0PWIh' 
+  : (process.env.NEXT_PUBLIC_GIPHY_API_KEY || 'sXpGFDGZs0Dv1mmNFvYaGUvYwKX0PWIh');
+
+const giphyFetch = new GiphyFetch(GIPHY_KEY);
 
 interface CreateDareModalProps {
   onClose: () => void;
@@ -11,7 +20,7 @@ interface CreateDareModalProps {
 }
 
 export const CreateDareModal: React.FC<CreateDareModalProps> = ({ onClose, onDareCreated }) => {
-  const { createDare } = useDareProgram();
+  const { createDare } = useDareApi();
   
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -25,10 +34,26 @@ export const CreateDareModal: React.FC<CreateDareModalProps> = ({ onClose, onDar
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  
+  // GIF State
+  const [bannerType, setBannerType] = useState<'upload' | 'gif'>('upload');
+  const [gifSearch, setGifSearch] = useState('');
+  const [selectedGif, setSelectedGif] = useState<any>(null);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(gifSearch), 500);
+    return () => clearTimeout(timer);
+  }, [gifSearch]);
+
+  const fetchGifs = (offset: number) => giphyFetch.search(debouncedSearch || 'fail', { offset, limit: 10 });
 
   const handleQuickDeadline = (minutes: number) => {
     const deadlineDate = new Date(Date.now() + minutes * 60 * 1000);
-    const deadlineString = deadlineDate.toISOString().slice(0, 16);
+    // Adjust for timezone to get local ISO string
+    const offset = deadlineDate.getTimezoneOffset() * 60000;
+    const localDate = new Date(deadlineDate.getTime() - offset);
+    const deadlineString = localDate.toISOString().slice(0, 16);
     setDeadline(deadlineString);
     setShowCustomDeadline(false);
   };
@@ -99,13 +124,16 @@ export const CreateDareModal: React.FC<CreateDareModalProps> = ({ onClose, onDar
         logoUrl = logoResult.url;
       }
 
-      // Upload banner if provided
-      if (bannerFile) {
+      // Upload banner if provided (and type is upload)
+      if (bannerType === 'upload' && bannerFile) {
         setUploadProgress(50);
         toast.dismiss();
         toast.loading('Uploading banner...');
         const bannerResult = await PinataService.uploadFile(bannerFile);
         bannerUrl = bannerResult.url;
+      } else if (bannerType === 'gif' && selectedGif) {
+        // Use selected GIF URL
+        bannerUrl = selectedGif.images.original.url;
       }
 
       setUploadProgress(75);
@@ -395,55 +423,127 @@ export const CreateDareModal: React.FC<CreateDareModalProps> = ({ onClose, onDar
                 <p className="text-xs text-anarchist-offwhite mt-1 font-brutal">Square images work best. Will use default logo if not provided.</p>
               </div>
 
-              {/* Banner Upload */}
+              {/* Banner Selection */}
               <div>
                 <label className="block text-sm font-brutal font-bold text-anarchist-red mb-2 uppercase tracking-wider">
                   BANNER IMAGE (OPTIONAL)
                 </label>
-                <div className="border-2 border-dashed border-anarchist-red bg-anarchist-charcoal p-4 text-center hover:border-anarchist-white transition-colors">
-                  {bannerPreview ? (
-                    <div className="relative">
-                      <img 
-                        src={bannerPreview} 
-                        alt="Banner preview" 
-                        className="mx-auto h-32 w-full object-cover border border-anarchist-red"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setBannerFile(null);
-                          setBannerPreview(null);
-                        }}
-                        className="absolute -top-2 -right-2 bg-anarchist-red text-anarchist-black rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-700 font-brutal font-bold"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ) : (
-                    <div>
-                      <input
-                        type="file"
-                        id="banner-upload"
-                        className="hidden"
-                        onChange={handleBannerSelect}
-                        accept="image/*"
-                      />
-                      <label htmlFor="banner-upload" className="cursor-pointer">
-                        <div className="text-anarchist-white">
-                          <div className="text-3xl mb-2">
-                            <svg className="w-8 h-8 mx-auto" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M4 5a2 2 0 00-2 2v6a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2H4zm0 2h12v6H4V7z" clipRule="evenodd" />
-                              <path d="M7 9a1 1 0 11-2 0 1 1 0 012 0z" />
-                              <path fillRule="evenodd" d="M6 11l2-2 3 3 4-4 1 1v2H6v-1z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                          <p className="text-sm font-brutal font-bold uppercase tracking-wider">UPLOAD BANNER</p>
-                          <p className="text-xs font-brutal text-anarchist-offwhite">PNG, JPG up to 10MB</p>
-                        </div>
-                      </label>
-                    </div>
-                  )}
+                
+                {/* Tabs */}
+                <div className="flex mb-2 border-b border-anarchist-red">
+                  <button
+                    type="button"
+                    onClick={() => setBannerType('upload')}
+                    className={`px-4 py-2 text-sm font-brutal font-bold uppercase transition-colors ${
+                      bannerType === 'upload' 
+                        ? 'bg-anarchist-red text-anarchist-black' 
+                        : 'text-anarchist-offwhite hover:text-anarchist-white'
+                    }`}
+                  >
+                    Upload Image
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBannerType('gif')}
+                    className={`px-4 py-2 text-sm font-brutal font-bold uppercase transition-colors ${
+                      bannerType === 'gif' 
+                        ? 'bg-anarchist-red text-anarchist-black' 
+                        : 'text-anarchist-offwhite hover:text-anarchist-white'
+                    }`}
+                  >
+                    Choose GIF
+                  </button>
                 </div>
+
+                {bannerType === 'upload' ? (
+                  <div className="border-2 border-dashed border-anarchist-red bg-anarchist-charcoal p-4 text-center hover:border-anarchist-white transition-colors">
+                    {bannerPreview ? (
+                      <div className="relative">
+                        <img 
+                          src={bannerPreview} 
+                          alt="Banner preview" 
+                          className="mx-auto h-32 w-full object-cover border border-anarchist-red"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBannerFile(null);
+                            setBannerPreview(null);
+                          }}
+                          className="absolute -top-2 -right-2 bg-anarchist-red text-anarchist-black rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-700 font-brutal font-bold"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ) : (
+                      <div>
+                        <input
+                          type="file"
+                          id="banner-upload"
+                          className="hidden"
+                          onChange={handleBannerSelect}
+                          accept="image/*"
+                        />
+                        <label htmlFor="banner-upload" className="cursor-pointer">
+                          <div className="text-anarchist-white">
+                            <div className="text-3xl mb-2">
+                              <svg className="w-8 h-8 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M4 5a2 2 0 00-2 2v6a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2H4zm0 2h12v6H4V7z" clipRule="evenodd" />
+                                <path d="M7 9a1 1 0 11-2 0 1 1 0 012 0z" />
+                                <path fillRule="evenodd" d="M6 11l2-2 3 3 4-4 1 1v2H6v-1z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                            <p className="text-sm font-brutal font-bold uppercase tracking-wider">UPLOAD BANNER</p>
+                            <p className="text-xs font-brutal text-anarchist-offwhite">PNG, JPG up to 10MB</p>
+                          </div>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="border-2 border-anarchist-red bg-anarchist-charcoal p-2">
+                    {selectedGif ? (
+                      <div className="relative">
+                        <img 
+                          src={selectedGif.images.original.url} 
+                          alt="Selected GIF" 
+                          className="w-full h-32 object-cover border border-anarchist-red"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setSelectedGif(null)}
+                          className="absolute -top-2 -right-2 bg-anarchist-red text-anarchist-black rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-700 font-brutal font-bold"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          value={gifSearch || ''}
+                          onChange={(e) => setGifSearch(e.target.value)}
+                          placeholder="Search GIFs..."
+                          className="w-full px-3 py-2 bg-anarchist-black border border-anarchist-red text-anarchist-white font-brutal text-sm focus:outline-none focus:ring-1 focus:ring-anarchist-red"
+                        />
+                        <div className="h-48 overflow-y-auto custom-scrollbar">
+                          <Grid
+                            width={350}
+                            columns={3}
+                            fetchGifs={fetchGifs}
+                            key={debouncedSearch}
+                            onGifClick={(gif, e) => {
+                              e.preventDefault();
+                              setSelectedGif(gif);
+                            }}
+                            noLink
+                            hideAttribution
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <p className="text-xs text-anarchist-offwhite mt-1 font-brutal">Landscape orientation (16:9) recommended. Will use default banner if not provided.</p>
               </div>
 

@@ -5,6 +5,8 @@ import { Heart, MessageCircle, Share, Eye, Trophy, Calendar, Clock } from 'lucid
 import { formatDistanceToNow } from 'date-fns';
 import { useVideoViewTracking } from '@/lib/videoViewTracking';
 
+const DEFAULT_AVATAR = "https://brown-traditional-sheep-998.mypinata.cloud/ipfs/bafkreihpfyvyryphyedr44zteziu3d3hbq47cekhre5c5zjjyn6w3ezttq";
+
 interface ProofSubmission {
   id: string;
   dareId: string;
@@ -23,6 +25,8 @@ interface ProofSubmission {
   user: {
     id: string;
     username: string;
+    walletAddress?: string;
+    avatar?: string;
   };
   isLiked?: boolean; // Whether current user has liked this submission
 }
@@ -160,9 +164,9 @@ const ContestantsSection: React.FC<ContestantsSectionProps> = ({
 
   if (error) {
     return (
-      <div className="bg-gray-900 rounded-lg p-6">
-        <h3 className="text-xl font-bold text-white mb-4">Contestants</h3>
-        <div className="text-red-400 text-center py-8">
+      <div className="bg-transparent rounded-lg p-6">
+        <h3 className="text-xl font-brutal font-bold text-anarchist-offwhite mb-4">Contestants</h3>
+        <div className="text-anarchist-red text-center py-8">
           {error}
         </div>
       </div>
@@ -170,18 +174,18 @@ const ContestantsSection: React.FC<ContestantsSectionProps> = ({
   }
 
   return (
-    <div className="bg-gray-900 rounded-lg p-6">
+    <div className="bg-transparent rounded-lg p-6">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-bold text-white">
+        <h3 className="text-xl font-brutal font-bold text-anarchist-offwhite">
           Contestants ({submissions.length})
         </h3>
         
         <div className="flex items-center space-x-2">
-          <label className="text-sm text-gray-400">Sort by:</label>
+          <label className="text-sm text-anarchist-gray font-brutal">Sort by:</label>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as 'newest' | 'likes' | 'early')}
-            className="bg-gray-800 text-white px-3 py-1 rounded-md text-sm border border-gray-700 focus:border-purple-500 focus:outline-none"
+            className="bg-anarchist-black text-anarchist-offwhite px-3 py-1 rounded-md text-sm border border-anarchist-red focus:border-red-500 focus:outline-none font-brutal"
           >
             <option value="likes">Most Liked</option>
             <option value="early">Earliest</option>
@@ -192,8 +196,8 @@ const ContestantsSection: React.FC<ContestantsSectionProps> = ({
 
       {submissions.length === 0 ? (
         <div className="text-center py-12">
-          <div className="text-gray-400 text-lg mb-2">No submissions yet</div>
-          <div className="text-gray-500 text-sm">Be the first to take on this dare!</div>
+          <div className="text-anarchist-gray text-lg mb-2 font-brutal font-bold">No submissions yet</div>
+          <div className="text-anarchist-gray text-sm">Be the first to take on this dare!</div>
         </div>
       ) : (
         <div className="max-h-[600px] overflow-y-auto">
@@ -201,17 +205,12 @@ const ContestantsSection: React.FC<ContestantsSectionProps> = ({
             {submissions.map((submission, index) => (
             <div
               key={submission.id}
-              className="bg-gray-800 rounded-lg p-4 transition-all duration-200 hover:bg-gray-750"
+              className="bg-anarchist-black border border-anarchist-red rounded-lg p-4 transition-all duration-200 hover:border-red-500"
             >
               <div className="flex items-start space-x-4">
-                {/* Rank indicator */}
-                <div className="flex items-center justify-center w-8 h-8 bg-gray-700 rounded-full text-sm font-bold">
-                  {getRankIcon(index) || (index + 1)}
-                </div>
-
                 {/* Video thumbnail */}
                 <div className="flex-shrink-0">
-                  <div className="relative w-20 h-20 bg-gray-700 rounded-lg overflow-hidden group cursor-pointer">
+                  <div className="relative w-24 h-24 bg-anarchist-charcoal rounded-lg overflow-hidden group cursor-pointer border border-anarchist-gray hover:border-anarchist-red transition-colors">
                     <video
                       src={getIpfsVideoUrl(submission.ipfsHash)}
                       className="w-full h-full object-cover"
@@ -223,10 +222,10 @@ const ContestantsSection: React.FC<ContestantsSectionProps> = ({
                       onPlay={() => trackView(submission.id)}
                     />
                     <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Eye className="w-5 h-5 text-white" />
+                      <Eye className="w-5 h-5 text-anarchist-red" />
                     </div>
                     {submission.duration && (
-                      <div className="absolute bottom-1 right-1 bg-black bg-opacity-75 text-white text-xs px-1 rounded">
+                      <div className="absolute bottom-1 right-1 bg-anarchist-black bg-opacity-90 text-anarchist-offwhite text-xs px-1.5 py-0.5 rounded font-brutal font-bold">
                         {formatDuration(submission.duration)}
                       </div>
                     )}
@@ -237,21 +236,23 @@ const ContestantsSection: React.FC<ContestantsSectionProps> = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center space-x-2 mb-2">
                     <div className="flex items-center space-x-2">
-                      <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                        {submission.user.username.charAt(0).toUpperCase()}
-                      </div>
-                      <span className="font-semibold text-white">
-                        {submission.user.username}
+                      <img 
+                        src={submission.user?.avatar || DEFAULT_AVATAR}
+                        alt="Profile"
+                        className="w-7 h-7 rounded-full object-cover border border-anarchist-red"
+                      />
+                      <span className="font-brutal font-bold text-anarchist-offwhite">
+                        {submission.user?.username || `${submission.user?.walletAddress?.slice(0, 6)}...${submission.user?.walletAddress?.slice(-4)}` || 'Anonymous'}
                       </span>
                     </div>
-                    <div className="flex items-center text-gray-400 text-sm">
+                    <div className="flex items-center text-anarchist-gray text-xs">
                       <Calendar className="w-3 h-3 mr-1" />
-                      {formatDistanceToNow(new Date(submission.createdAt), { addSuffix: true })}
+                      <span className="font-brutal">{formatDistanceToNow(new Date(submission.createdAt), { addSuffix: true })}</span>
                     </div>
                   </div>
 
                   {submission.description && (
-                    <p className="text-gray-300 text-sm mb-3 line-clamp-2">
+                    <p className="text-anarchist-white text-sm mb-3 line-clamp-2">
                       {submission.description}
                     </p>
                   )}
@@ -261,10 +262,10 @@ const ContestantsSection: React.FC<ContestantsSectionProps> = ({
                     <button
                       onClick={() => handleLike(submission.id)}
                       disabled={!currentUserId}
-                      className={`flex items-center space-x-1 text-sm transition-colors ${
+                      className={`flex items-center space-x-1 text-sm transition-colors font-brutal font-bold ${
                         submission.isLiked
-                          ? 'text-red-400 hover:text-red-300'
-                          : 'text-gray-400 hover:text-red-400'
+                          ? 'text-anarchist-red'
+                          : 'text-anarchist-gray hover:text-anarchist-red'
                       } ${!currentUserId ? 'cursor-not-allowed opacity-50' : ''}`}
                     >
                       <Heart
@@ -273,19 +274,19 @@ const ContestantsSection: React.FC<ContestantsSectionProps> = ({
                       <span>{submission.likesCount}</span>
                     </button>
 
-                    <div className="flex items-center space-x-1 text-gray-400 text-sm">
+                    <div className="flex items-center space-x-1 text-anarchist-gray text-sm font-brutal font-bold">
                       <MessageCircle className="w-4 h-4" />
                       <span>{submission.commentsCount}</span>
                     </div>
 
-                    <div className="flex items-center space-x-1 text-gray-400 text-sm">
+                    <div className="flex items-center space-x-1 text-anarchist-gray text-sm font-brutal font-bold">
                       <Eye className="w-4 h-4" />
                       <span>{submission.viewsCount}</span>
                     </div>
 
                     <button
                       onClick={() => handleShare(submission)}
-                      className="flex items-center space-x-1 text-gray-400 hover:text-blue-400 text-sm transition-colors"
+                      className="flex items-center space-x-1 text-anarchist-gray hover:text-anarchist-red text-sm transition-colors font-brutal font-bold"
                     >
                       <Share className="w-4 h-4" />
                       <span>{submission.sharesCount}</span>

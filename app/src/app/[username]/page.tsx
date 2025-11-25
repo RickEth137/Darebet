@@ -11,6 +11,7 @@ interface PublicUserData {
   username: string;
   bio: string | null;
   avatar: string | null;
+  banner: string | null;
   daresCreated: number;
   daresCompleted: number;
   totalBets: number;
@@ -215,79 +216,96 @@ export default function PublicUserProfilePage() {
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-6xl mx-auto">
         {/* Profile Header */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center space-x-6">
-              {/* Avatar */}
-              {profileUser.avatar ? (
-                <img 
-                  src={profileUser.avatar} 
-                  alt="Profile"
-                  className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg"
-                />
-              ) : (
-                <img 
-                  src="/default-avatar.jpg" 
-                  alt="Profile" 
-                  className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg"
-                />
-              )}
-              
-              <div>
-                <div className="flex items-center space-x-3 mb-2">
-                  <h1 className="text-3xl font-bold text-gray-900">
-                    @{profileUser.username}
-                  </h1>
-                  {isOwnProfile && (
-                    <span className="px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded-full font-medium">
-                      Your Profile
-                    </span>
-                  )}
-                </div>
-                <p className="text-gray-500 font-mono text-sm mb-2">
-                  {formatAddress(profileUser.walletAddress)}
-                </p>
-                <p className="text-gray-500 text-sm">
-                  Member since {formatDate(profileUser.createdAt)}
-                </p>
-              </div>
-            </div>
-
-            {isOwnProfile && (
-              <button
-                onClick={() => router.push('/profile')}
-                className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-              >
-                Edit Profile
-              </button>
+        <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+          {/* Banner */}
+          <div className="h-48 w-full bg-gray-200 relative">
+            {profileUser.banner ? (
+              <img 
+                src={profileUser.banner} 
+                alt="Banner" 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-r from-gray-800 to-gray-900"></div>
             )}
           </div>
 
-          {/* Bio */}
-          {profileUser.bio && (
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <p className="text-gray-700 text-lg">{profileUser.bio}</p>
-            </div>
-          )}
+          <div className="p-6">
+            <div className="flex items-start justify-between -mt-16 mb-6">
+              <div className="flex items-end space-x-6">
+                {/* Avatar */}
+                {profileUser.avatar ? (
+                  <img 
+                    src={profileUser.avatar} 
+                    alt="Profile"
+                    className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg bg-white"
+                  />
+                ) : (
+                  <img 
+                    src="/default-avatar.jpg" 
+                    alt="Profile" 
+                    className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg bg-white"
+                  />
+                )}
+                
+                <div className="mb-2 pt-16">
+                  <div className="flex items-center space-x-3 mb-1">
+                    <h1 className="text-3xl font-bold text-gray-900">
+                      @{profileUser.username}
+                    </h1>
+                    {isOwnProfile && (
+                      <span className="px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded-full font-medium">
+                        Your Profile
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-gray-500 font-mono text-sm mb-1">
+                    {formatAddress(profileUser.walletAddress)}
+                  </p>
+                  <p className="text-gray-500 text-sm">
+                    Member since {formatDate(profileUser.createdAt)}
+                  </p>
+                </div>
+              </div>
 
-          {/* Stats Grid */}
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-primary-600">{userDares.length}</div>
-                <div className="text-sm text-anarchist-white font-medium">Dares Created</div>
+              <div className="mt-16">
+                {isOwnProfile && (
+                  <button
+                    onClick={() => router.push('/profile')}
+                    className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                  >
+                    Edit Profile
+                  </button>
+                )}
               </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-blue-600">{userBets.length}</div>
-                <div className="text-sm text-anarchist-white font-medium">Total Bets</div>
+            </div>
+
+            {/* Bio */}
+            {profileUser.bio && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <p className="text-gray-700 text-lg">{profileUser.bio}</p>
               </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-green-600">{activeBets.length}</div>
-                <div className="text-sm text-anarchist-white font-medium">Active Bets</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-purple-600">{profileUser.totalWinnings.toFixed(2)}</div>
-                <div className="text-sm text-anarchist-white font-medium">Total Winnings (SOL)</div>
+            )}
+
+            {/* Stats Grid */}
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-primary-600">{userDares.length}</div>
+                  <div className="text-sm text-anarchist-white font-medium">Dares Created</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-blue-600">{userBets.length}</div>
+                  <div className="text-sm text-anarchist-white font-medium">Total Bets</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-green-600">{activeBets.length}</div>
+                  <div className="text-sm text-anarchist-white font-medium">Active Bets</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-purple-600">{profileUser.totalWinnings.toFixed(2)}</div>
+                  <div className="text-sm text-anarchist-white font-medium">Total Winnings (SOL)</div>
+                </div>
               </div>
             </div>
           </div>

@@ -2,6 +2,7 @@ import './globals.css';
 import { WalletContextProvider } from '@/components/WalletContextProvider';
 import { SocketProvider } from '@/contexts/SocketContext';
 import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 import { Toaster } from 'react-hot-toast';
 
 export const metadata = {
@@ -20,9 +21,10 @@ export default function RootLayout({
         <WalletContextProvider>
           <SocketProvider>
             <Header />
-            <main className="min-h-screen">
+            <main className="min-h-screen pb-16">
               {children}
             </main>
+            <Footer />
             <Toaster 
               position="top-right"
               toastOptions={{

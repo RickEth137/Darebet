@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Camera, Square, Play, Download, RotateCcw, Smartphone } from 'lucide-react';
+import { Camera, Square, Play, Pause, Download, RotateCcw, Smartphone } from 'lucide-react';
 
 interface VideoRecorderProps {
   onVideoRecorded: (blob: Blob, url: string) => void;
@@ -21,6 +21,7 @@ const VideoRecorder: React.FC<VideoRecorderProps> = ({
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [deviceInfo, setDeviceInfo] = useState<string>('');
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
@@ -184,6 +185,7 @@ const VideoRecorder: React.FC<VideoRecorderProps> = ({
   const resetRecording = useCallback(() => {
     setRecordedVideoUrl(null);
     setIsPreviewMode(false);
+    setIsPlaying(false);
     setRecordingTime(0);
     
     if (timerRef.current) {
@@ -194,6 +196,19 @@ const VideoRecorder: React.FC<VideoRecorderProps> = ({
     // Restart camera preview
     startCamera();
   }, [startCamera]);
+
+  // Play/Pause video
+  const togglePlayback = useCallback(() => {
+    if (videoRef.current && isPreviewMode) {
+      if (isPlaying) {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        videoRef.current.play();
+        setIsPlaying(true);
+      }
+    }
+  }, [isPlaying, isPreviewMode]);
 
   // Toggle camera (front/back on mobile)
   const toggleCamera = useCallback(() => {
@@ -228,7 +243,7 @@ const VideoRecorder: React.FC<VideoRecorderProps> = ({
       <div className="bg-gray-800 p-4 flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <Camera className="w-5 h-5 text-blue-400" />
-          <span className="text-white font-medium">Record Proof</span>
+          <span className="text-white font-medium">Enter Dare</span>
           <span className="text-xs text-gray-400 bg-gray-700 px-2 py-1 rounded">
             {deviceInfo}
           </span>
@@ -272,86 +287,137 @@ const VideoRecorder: React.FC<VideoRecorderProps> = ({
           </div>
         )}
 
-        {hasPermission && (
+        {hasPermission && !isPreviewMode && (
           <video
             ref={videoRef}
             autoPlay
             playsInline
-            muted={!isPreviewMode}
+            muted
             className="w-full h-full object-cover"
             style={{ transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }}
           />
         )}
 
+        {isPreviewMode && recordedVideoUrl && (
+          <video
+            ref={videoRef}
+            src={recordedVideoUrl}
+            playsInline
+            className="w-full h-full object-cover"
+            style={{ transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }}
+            onPlay={() => {
+              console.log('✅ Playback started');
+              setIsPlaying(true);
+            }}
+            onPause={() => {
+              console.log('⏸️ Playback paused');
+              setIsPlaying(false);
+            }}
+            onEnded={() => {
+              console.log('✅ Playback ended');
+              setIsPlaying(false);
+            }}
+          />
+        )}
+
         {/* Recording indicator */}
         {isRecording && (
-          <div className="absolute top-4 left-4 flex items-center space-x-2 bg-red-600 px-3 py-1 rounded-full">
-            <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-            <span className="text-white text-sm font-medium">REC</span>
+          <div className="absolute top-4 left-4 flex items-center space-x-2 bg-anarchist-red px-3 py-2 rounded-full animate-pulse z-20">
+            <div className="w-3 h-3 bg-white rounded-full" />
+            <span className="text-anarchist-black text-sm font-brutal font-bold uppercase">RECORDING</span>
           </div>
         )}
 
         {/* Camera flip button (mobile only) */}
-        {/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && hasPermission && !isPreviewMode && (
+        {/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && hasPermission && !isPreviewMode && !isRecording && mediaStream && (
           <button
             onClick={toggleCamera}
-            className="absolute top-4 right-4 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-colors"
+            className="absolute top-4 right-4 bg-black/70 text-white p-2 rounded-full hover:bg-black/90 transition-colors z-20"
           >
             <RotateCcw className="w-5 h-5" />
           </button>
         )}
-      </div>
 
-      {/* Controls */}
-      <div className="p-4 bg-gray-800">
-        {!isPreviewMode ? (
-          <div className="flex items-center justify-center space-x-4">
-            {!isRecording ? (
-              <button
-                onClick={startRecording}
-                disabled={!hasPermission}
-                className="bg-red-600 text-white p-4 rounded-full hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
-              >
-                <div className="w-6 h-6 bg-white rounded-full" />
-              </button>
-            ) : (
-              <button
-                onClick={stopRecording}
-                className="bg-red-600 text-white p-4 rounded-full hover:bg-red-700 transition-colors"
-              >
-                <Square className="w-6 h-6 fill-current" />
-              </button>
-            )}
+        {/* Watermark - Bottom Right Corner */}
+        {(hasPermission && mediaStream) || isPreviewMode ? (
+          <div className="absolute bottom-12 right-8 z-20 opacity-80 flex flex-col items-center gap-0">
+            <img 
+              src="https://brown-traditional-sheep-998.mypinata.cloud/ipfs/bafkreiacb5xsbqh63jxw665fjy5kxvqrp5um6mmupmjqafnegyk3yfr2gq"
+              alt="Watermark"
+              className="w-24 h-auto"
+            />
+            <span className="text-white font-brutal text-sm -mt-1">darebet.fun</span>
           </div>
-        ) : (
-          <div className="flex items-center justify-between">
-            <button
-              onClick={resetRecording}
-              className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors flex items-center space-x-2"
-            >
-              <RotateCcw className="w-4 h-4" />
-              <span>Retake</span>
-            </button>
-            
-            <div className="text-green-400 flex items-center space-x-2">
-              <div className="w-2 h-2 bg-green-400 rounded-full" />
-              <span className="text-sm">Video Ready</span>
+        ) : null}
+
+        {/* Action Bar - Only show when camera is active or in preview mode */}
+        {(hasPermission && mediaStream && !isPreviewMode) || isPreviewMode ? (
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/90 to-transparent p-4 z-20">
+            <div className="flex items-center justify-center space-x-3">
+              {!isPreviewMode ? (
+                // Live Camera State
+                <>
+                  {!isRecording ? (
+                    <button
+                      onClick={startRecording}
+                      disabled={!hasPermission}
+                      className="bg-anarchist-red hover:bg-red-700 text-anarchist-black px-6 py-2.5 rounded-lg disabled:bg-anarchist-gray disabled:cursor-not-allowed transition-all flex items-center space-x-2 font-brutal font-bold uppercase tracking-wider text-sm shadow-lg hover:shadow-xl disabled:opacity-50"
+                    >
+                      <div className="w-3 h-3 bg-anarchist-black rounded-full" />
+                      <span>Start Recording</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={stopRecording}
+                      className="bg-anarchist-red hover:bg-red-700 text-anarchist-black px-6 py-2.5 rounded-lg transition-all flex items-center space-x-2 font-brutal font-bold uppercase tracking-wider text-sm shadow-lg hover:shadow-xl animate-pulse"
+                    >
+                      <Square className="w-3 h-3 fill-current" />
+                      <span>Stop</span>
+                    </button>
+                  )}
+                </>
+              ) : (
+                // Preview State
+                <>
+                  <button
+                    onClick={togglePlayback}
+                    className="bg-anarchist-red hover:bg-red-700 text-anarchist-black px-5 py-2.5 rounded-lg transition-all flex items-center space-x-2 font-brutal font-bold uppercase tracking-wider text-sm shadow-lg hover:shadow-xl"
+                  >
+                    {isPlaying ? (
+                      <>
+                        <Pause className="w-4 h-4" />
+                        <span>Pause</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-4 h-4" />
+                        <span>Play</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={resetRecording}
+                    className="bg-anarchist-gray hover:bg-gray-600 text-anarchist-offwhite px-5 py-2.5 rounded-lg transition-all flex items-center space-x-2 font-brutal font-bold uppercase tracking-wider text-sm shadow-lg hover:shadow-xl"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    <span>Re-record</span>
+                  </button>
+
+                  <div className="flex items-center space-x-2 bg-green-900/50 border border-green-500 text-green-400 px-5 py-2.5 rounded-lg shadow-lg">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                    <span className="text-sm font-brutal font-bold uppercase">Ready</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
-        )}
+        ) : null}
+      </div>
 
-        {/* Help text */}
-        <div className="mt-3 text-xs text-gray-400 text-center">
-          {!isRecording && !isPreviewMode && (
-            <p>Tap the red button to start recording your proof video</p>
-          )}
-          {isRecording && (
-            <p>Recording... Tap the square to stop (max {enforcedMaxDuration}s)</p>
-          )}
-          {isPreviewMode && (
-            <p>Review your video or retake if needed</p>
-          )}
-        </div>
+      {/* Timer Display */}
+      <div className="mt-2 text-xs text-anarchist-gray text-center font-mono">
+        {formatTime(recordingTime)} / {formatTime(enforcedMaxDuration)}
       </div>
     </div>
   );

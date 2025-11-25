@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { z } from 'zod';
 
 const DareSchema = z.object({
-  onChainId: z.string(),
+  onChainId: z.string().optional(),
   title: z.string(),
   description: z.string(),
   creator: z.string(),
@@ -11,6 +11,7 @@ const DareSchema = z.object({
   bannerUrl: z.string().optional(),
   deadline: z.string(),
   minBet: z.number(),
+  txSignature: z.string().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -22,17 +23,19 @@ export async function POST(request: NextRequest) {
     const DEFAULT_LOGO = 'https://brown-traditional-sheep-998.mypinata.cloud/ipfs/bafybeih6nwb4mkrtqg2pucdgutumvn464m6nup5clop5msyfzkmifzeumy';
     const DEFAULT_BANNER = 'https://brown-traditional-sheep-998.mypinata.cloud/ipfs/bafybeih6nwb4mkrtqg2pucdgutumvn464m6nup5clop5msyfzkmifzeumy';
 
-    // Check if dare already exists
-    const existingDare = await db.dare.findUnique({
-      where: { onChainId: validatedData.onChainId }
-    });
-
-    if (existingDare) {
-      return NextResponse.json({ 
-        success: true, 
-        dare: existingDare,
-        message: 'Dare already exists' 
+    // Check if dare already exists (only if onChainId is provided)
+    if (validatedData.onChainId) {
+      const existingDare = await db.dare.findUnique({
+        where: { onChainId: validatedData.onChainId }
       });
+
+      if (existingDare) {
+        return NextResponse.json({ 
+          success: true, 
+          dare: existingDare,
+          message: 'Dare already exists' 
+        });
+      }
     }
 
     // Create new dare record
@@ -46,6 +49,8 @@ export async function POST(request: NextRequest) {
         bannerUrl: validatedData.bannerUrl || DEFAULT_BANNER,
         deadline: new Date(validatedData.deadline),
         minBet: validatedData.minBet,
+        txSignature: validatedData.txSignature,
+        status: 'ACTIVE', // Default status
         createdAt: new Date(),
       }
     });
@@ -95,6 +100,7 @@ export async function GET(request: NextRequest) {
           select: {
             bets: true,
             proofSubmissions: true,
+            comments: true,
           }
         },
         proofSubmissions: {

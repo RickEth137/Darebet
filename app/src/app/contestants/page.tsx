@@ -146,7 +146,7 @@ export default function ContestantsFeedPage() {
             <div className="text-center py-16">
               <div className="text-anarchist-red text-6xl mb-4 animate-pulse">📹</div>
               <h1 className="text-2xl font-brutal font-bold text-anarchist-red uppercase tracking-wider mb-2">
-                Loading Contestants...
+                Loading DareTok...
               </h1>
             </div>
           </div>
@@ -162,7 +162,7 @@ export default function ContestantsFeedPage() {
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-4xl font-brutal font-bold text-anarchist-red uppercase tracking-wider mb-4">
-              🔴 CONTESTANTS FEED
+              🔴 DARETOK FEED
             </h1>
             <p className="text-anarchist-offwhite font-brutal mb-6">
               WATCH DARE SUBMISSIONS • LIKE • COMMENT • SUPPORT YOUR FAVORITES
@@ -299,7 +299,7 @@ export default function ContestantsFeedPage() {
           {/* Load More */}
           <div className="text-center mt-12">
             <button className="bg-anarchist-red hover:bg-red-700 text-anarchist-black font-brutal font-bold py-3 px-6 uppercase tracking-wider transition-colors border-2 border-anarchist-red">
-              LOAD MORE CONTESTANTS
+              LOAD MORE VIDEOS
             </button>
           </div>
         </div>

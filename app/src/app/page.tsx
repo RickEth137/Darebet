@@ -1,21 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { DareCard } from '@/components/DareCard';
 import { CreateDareModal } from '@/components/CreateDareModal';
 import { WelcomeModal } from '@/components/WelcomeModal';
 import { LoadingSpinner } from '@/components/CircularLoader';
-import { useDareProgram } from '@/hooks/useDareProgram';
+import { useDareApi } from '@/hooks/useDareApi';
 import { useUser } from '@/hooks/useUser';
+import { useSocket } from '@/contexts/SocketContext';
 import { Dare } from '@/types';
+import { getMockDares } from '@/lib/mockDares';
 
 export default function HomePage() {
   const { connection } = useConnection();
   const { publicKey } = useWallet();
-  const { program, getDares } = useDareProgram();
+  const { getDares } = useDareApi();
   const { user, isAuthenticated } = useUser();
+  const { socket, joinDaresList, leaveDaresList } = useSocket();
   
   const [dares, setDares] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,160 +26,109 @@ export default function HomePage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
+  // DEBUG: Track dares state changes
+  useEffect(() => {
+    console.log('[HomePage] Dares state changed:', {
+      daresCount: dares.length,
+      loading,
+      mounted,
+      isAuthenticated
+    });
+  }, [dares, loading, mounted, isAuthenticated]);
+
   // Fix hydration issues
   useEffect(() => {
     setMounted(true);
+    console.log('[HomePage] Component mounted');
   }, []);
+
+  // Join dares list room for real-time updates
+  useEffect(() => {
+    if (socket) {
+      joinDaresList();
+      
+      return () => {
+        leaveDaresList();
+      };
+    }
+  }, [socket, joinDaresList, leaveDaresList]);
 
   // Mock data for demonstration
   const createMockDares = (): Dare[] => {
-    const mockPublicKey = new PublicKey('11111111111111111111111111111111');
-    const now = Date.now() / 1000;
-    
-    return [
-      {
-        publicKey: mockPublicKey,
-        account: {
-          creator: mockPublicKey,
-          platformAuthority: mockPublicKey,
-          title: "EAT 10 GHOST PEPPERS IN 5 MINUTES",
-          description: "I DARE YOU TO CONSUME 10 CAROLINA REAPER GHOST PEPPERS WITHIN 5 MINUTES WITHOUT DRINKING ANYTHING. RECORD THE ENTIRE PROCESS.\n\nRules:\n• Must consume 10 full Carolina Reaper peppers\n• Time limit is strictly 5 minutes\n• No liquids allowed during or 10 minutes after\n• Must be recorded in one continuous take\n• Face must be visible throughout recording\n• Must show peppers before consumption\n• Timer must be visible in video",
-          deadline: now + (7 * 24 * 60 * 60), // 7 days from now
-          minBet: 0.05 * 1e9, // 0.05 SOL (fixed minimum bet)
-          totalPool: 2.5 * 1e9,
-          willDoPool: 1.2 * 1e9,
-          wontDoPool: 1.3 * 1e9,
-          isCompleted: false,
-          isExpired: false,
-          creatorFeeClaimed: false,
-          logoUrl: "https://brown-traditional-sheep-998.mypinata.cloud/ipfs/bafkreiacb5xsbqh63jxw665fjy5kxvqrp5um6mmupmjqafnegyk3yfr2gq",
-          bump: 1,
-        }
-      },
-      {
-        publicKey: mockPublicKey,
-        account: {
-          creator: mockPublicKey,
-          platformAuthority: mockPublicKey,
-          title: "SLEEP IN A CEMETERY FOR 24 HOURS",
-          description: "SPEND AN ENTIRE NIGHT AND DAY IN A GRAVEYARD. NO LEAVING THE PREMISES. DOCUMENT WITH TIMESTAMPS EVERY 2 HOURS.\n\nRules:\n• Must stay within cemetery boundaries for full 24 hours\n• No leaving for any reason including bathroom breaks\n• Must document with timestamp every 2 hours\n• Must record entry and exit times\n• No assistance from others during the challenge\n• Must show cemetery sign/name in initial recording",
-          deadline: now + (14 * 24 * 60 * 60), // 14 days from now
-          minBet: 0.05 * 1e9, // 0.05 SOL (fixed minimum bet)
-          totalPool: 5.7 * 1e9,
-          willDoPool: 2.1 * 1e9,
-          wontDoPool: 3.6 * 1e9,
-          isCompleted: false,
-          isExpired: false,
-          creatorFeeClaimed: false,
-          logoUrl: "https://brown-traditional-sheep-998.mypinata.cloud/ipfs/bafkreiacb5xsbqh63jxw665fjy5kxvqrp5um6mmupmjqafnegyk3yfr2gq",
-          bump: 1,
-        }
-      },
-      {
-        publicKey: mockPublicKey,
-        account: {
-          creator: mockPublicKey,
-          platformAuthority: mockPublicKey,
-          title: "SHAVE HEAD AND EYEBROWS COMPLETELY",
-          description: "COMPLETELY SHAVE OFF ALL HAIR INCLUDING EYEBROWS. MUST KEEP IT OFF FOR AT LEAST 30 DAYS. NO WIGS OR FAKE HAIR ALLOWED.\n\nRules:\n• Must shave head completely bald\n• Must remove all eyebrow hair\n• No wigs, hats, or fake hair for 30 days\n• Must document before/after with timestamps\n• Weekly progress photos required\n• No professional makeup to simulate hair",
-          deadline: now + (3 * 24 * 60 * 60), // 3 days from now
-          minBet: 0.05 * 1e9, // 0.05 SOL (fixed minimum bet)
-          totalPool: 8.9 * 1e9,
-          willDoPool: 4.2 * 1e9,
-          wontDoPool: 4.7 * 1e9,
-          isCompleted: false,
-          isExpired: false,
-          creatorFeeClaimed: false,
-          logoUrl: "https://brown-traditional-sheep-998.mypinata.cloud/ipfs/bafkreiacb5xsbqh63jxw665fjy5kxvqrp5um6mmupmjqafnegyk3yfr2gq",
-          bump: 1,
-        }
-      },
-      {
-        publicKey: mockPublicKey,
-        account: {
-          creator: mockPublicKey,
-          platformAuthority: mockPublicKey,
-          title: "WALK BACKWARDS FOR ENTIRE DAY",
-          description: "WALK ONLY BACKWARDS FOR 24 HOURS STRAIGHT. NO FORWARD STEPS ALLOWED. DOCUMENT THE JOURNEY WITH CONTINUOUS VIDEO.\n\nRules:\n• Zero forward steps for full 24 hours\n• Must be recorded continuously or with timestamps\n• No assistance from others for navigation\n• Must complete normal daily activities backwards\n• Can use mirrors but no guides or helpers\n• Must document start and end times clearly",
-          deadline: now + (10 * 24 * 60 * 60), // 10 days from now
-          minBet: 0.05 * 1e9, // 0.05 SOL
-          totalPool: 1.8 * 1e9,
-          willDoPool: 0.9 * 1e9,
-          wontDoPool: 0.9 * 1e9,
-          isCompleted: false,
-          isExpired: false,
-          creatorFeeClaimed: false,
-          logoUrl: "https://brown-traditional-sheep-998.mypinata.cloud/ipfs/bafkreiacb5xsbqh63jxw665fjy5kxvqrp5um6mmupmjqafnegyk3yfr2gq",
-          bump: 1,
-        }
-      },
-      {
-        publicKey: mockPublicKey,
-        account: {
-          creator: mockPublicKey,
-          platformAuthority: mockPublicKey,
-          title: "EAT NOTHING BUT MAYO FOR 3 DAYS",
-          description: "CONSUME ONLY MAYONNAISE FOR 72 HOURS. NO OTHER FOOD OR DRINKS EXCEPT WATER. MUST BE DOCUMENTED WITH MEAL TIMESTAMPS.",
-          deadline: now + (5 * 24 * 60 * 60), // 5 days from now
-          minBet: 0.05 * 1e9, // 0.05 SOL (fixed minimum bet)
-          totalPool: 3.4 * 1e9,
-          willDoPool: 1.8 * 1e9,
-          wontDoPool: 1.6 * 1e9,
-          isCompleted: false,
-          isExpired: false,
-          creatorFeeClaimed: false,
-          logoUrl: "https://brown-traditional-sheep-998.mypinata.cloud/ipfs/bafkreiacb5xsbqh63jxw665fjy5kxvqrp5um6mmupmjqafnegyk3yfr2gq",
-          bump: 1,
-        }
-      },
-      {
-        publicKey: mockPublicKey,
-        account: {
-          creator: mockPublicKey,
-          platformAuthority: mockPublicKey,
-          title: "TALK LIKE PIRATE FOR ONE MONTH",
-          description: "SPEAK ONLY IN PIRATE LANGUAGE FOR 30 CONSECUTIVE DAYS. MUST BE MAINTAINED IN ALL CONVERSATIONS, WORK, AND PUBLIC INTERACTIONS.",
-          deadline: now + (2 * 24 * 60 * 60), // 2 days from now
-          minBet: 0.05 * 1e9, // 0.05 SOL (fixed minimum bet)
-          totalPool: 6.2 * 1e9,
-          willDoPool: 3.7 * 1e9,
-          wontDoPool: 2.5 * 1e9,
-          isCompleted: false,
-          isExpired: false,
-          creatorFeeClaimed: false,
-          logoUrl: "https://brown-traditional-sheep-998.mypinata.cloud/ipfs/bafkreiacb5xsbqh63jxw665fjy5kxvqrp5um6mmupmjqafnegyk3yfr2gq",
-          bump: 1,
-        }
-      }
-    ];
+    return getMockDares();
   };
 
-  useEffect(() => {
-    loadDares();
-  }, [program]); // Load dares regardless of program availability
-
-  const loadDares = async () => {
+  const loadDares = useCallback(async () => {
+    console.log('[HomePage] loadDares called');
+    
+    setLoading(true);
+    
     try {
-      if (program) {
-        const fetchedDares = await getDares();
-        setDares(fetchedDares);
-      } else {
-        // Use mock data when program is not available
-        const mockDares = createMockDares();
-        setDares(mockDares);
-      }
+      // Always try to show mock data first for demo purposes
+      // In production, you'd only fetch from program
+      console.log('[HomePage] Using mock dares for demo');
+      const mockDares = createMockDares();
+      setDares(mockDares);
+      
+      // Optionally try to fetch real dares in background
+      console.log('[HomePage] Fetching real dares from API...');
+      getDares().then(fetchedDares => {
+        if (fetchedDares.length > 0) {
+          console.log('[HomePage] Fetched real dares:', fetchedDares.length);
+          setDares(fetchedDares);
+        }
+      }).catch(err => {
+        console.error('[HomePage] Failed to fetch real dares:', err);
+      });
     } catch (error) {
-      console.error('Error loading dares:', error);
+      console.error('[HomePage] Error loading dares:', error);
       // Fallback to mock data on error
       const mockDares = createMockDares();
       setDares(mockDares);
     } finally {
       setLoading(false);
     }
-  };
+  }, [getDares]); // Keep dependency
+
+  // Load dares on mount
+  useEffect(() => {
+    console.log('[HomePage] Mount effect - loading dares, mounted:', mounted);
+    if (mounted) {
+      loadDares();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted]); // Only depend on mounted - loadDares intentionally omitted to prevent loops
+
+  // Reload when wallet connects/disconnects
+  useEffect(() => {
+    console.log('[HomePage] Wallet changed, reloading dares');
+    if (mounted) {
+      loadDares();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [publicKey]); // Only depend on publicKey
+
+  // Listen for dare updates via WebSocket
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleDareUpdate = ({ dareId, updateType }: { dareId: string; updateType: string }) => {
+      console.log(`[HomePage] Dare updated via WebSocket: ${dareId} - ${updateType}`);
+      // Reload dares to get fresh data
+      loadDares();
+    };
+
+    socket.on('dare-data-changed', handleDareUpdate);
+
+    return () => {
+      socket.off('dare-data-changed', handleDareUpdate);
+    };
+  }, [socket, loadDares]);
 
   const handleDareCreated = () => {
     setShowCreateModal(false);
+    // Force refresh by clearing dares first
+    setDares([]);
     loadDares();
   };
 
@@ -236,6 +188,49 @@ export default function HomePage() {
     );
   }
 
+  // Empty state check
+  if (dares.length === 0 && !loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="mb-8">
+            <h1 className="text-4xl font-brutal font-bold text-anarchist-red mb-4 uppercase tracking-wider">
+              ACTIVE DARES
+            </h1>
+            <p className="text-lg text-anarchist-white font-brutal">
+              BET ON WHETHER SOMEONE WILL COMPLETE THESE DARES OR NOT
+            </p>
+          </div>
+
+          <div className="text-center py-16 bg-anarchist-black border border-anarchist-red">
+            <div className="text-6xl mb-4 text-anarchist-red font-brutal">[EMPTY]</div>
+            <h2 className="text-xl font-semibold text-anarchist-red mb-4 font-brutal">
+              NO ACTIVE BETS
+            </h2>
+            <p className="text-anarchist-offwhite mb-6 font-brutal">
+              THERE ARE NO ACTIVE DARES TO BET ON. CREATE ONE TO START THE CHAOS.
+            </p>
+            {isAuthenticated && (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="bg-anarchist-red hover:bg-anarchist-darkred text-anarchist-black font-brutal font-bold py-3 px-6 border-2 border-anarchist-red transition-colors duration-200 uppercase tracking-wider"
+              >
+                CREATE DARE
+              </button>
+            )}
+          </div>
+          
+          {showCreateModal && (
+            <CreateDareModal
+              onClose={() => setShowCreateModal(false)}
+              onDareCreated={handleDareCreated}
+            />
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex justify-between items-center mb-8">
@@ -284,29 +279,35 @@ export default function HomePage() {
             PREPARING YOUR DARE BETS EXPERIENCE
           </p>
         </div>
-      ) : dares.length === 0 ? (
-        <div className="text-center py-12 bg-anarchist-black border border-anarchist-red">
-          <div className="text-6xl mb-4 text-anarchist-red font-brutal">[EMPTY]</div>
-          <h2 className="text-xl font-semibold text-anarchist-red mb-4 font-brutal">
-            NO ACTIVE DARES
-          </h2>
-          <p className="text-anarchist-offwhite mb-6 font-brutal">
-            CREATE THE FIRST DARE AND START THE CHAOS
-          </p>
-          {isAuthenticated && (
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="bg-anarchist-red hover:bg-anarchist-darkred text-anarchist-black font-brutal font-bold py-3 px-6 border-2 border-anarchist-red transition-colors duration-200 uppercase tracking-wider"
-            >
-              CREATE DARE
-            </button>
-          )}
-        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {dares.map((dare) => (
-            <DareCard key={dare.publicKey.toString()} dare={dare} onUpdate={loadDares} />
-          ))}
+        <div 
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          ref={(el) => {
+            if (el) {
+              console.log('[HomePage] Grid rendered:', {
+                width: el.offsetWidth,
+                height: el.offsetHeight,
+                gridTemplateColumns: window.getComputedStyle(el).gridTemplateColumns,
+                childrenCount: el.children.length
+              });
+            }
+          }}
+        >
+          {dares.map((dare, index) => {
+            if (!dare || !dare.publicKey) {
+              console.error('[HomePage] Invalid dare object:', dare);
+              return null;
+            }
+            const keyString = dare.publicKey.toString();
+            console.log(`[HomePage] Rendering DareCard ${index + 1}/${dares.length}:`, {
+              id: keyString.slice(0, 8),
+              fullKey: keyString,
+              title: dare.account.title.slice(0, 30) + '...'
+            });
+            return (
+              <DareCard key={keyString} dare={dare} onUpdate={loadDares} />
+            );
+          })}
         </div>
       )}
 

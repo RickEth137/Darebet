@@ -15,7 +15,7 @@ export async function GET(
       );
     }
 
-    const user = await db.user.findUnique({
+    let user = await db.user.findUnique({
       where: { username },
       include: {
         _count: {
@@ -26,6 +26,21 @@ export async function GET(
         }
       }
     });
+
+    // If not found by username, try wallet address
+    if (!user) {
+      user = await db.user.findUnique({
+        where: { walletAddress: username },
+        include: {
+          _count: {
+            select: {
+              bets: true,
+              proofSubmissions: true,
+            }
+          }
+        }
+      });
+    }
 
     if (!user) {
       return NextResponse.json(

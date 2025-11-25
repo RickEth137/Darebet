@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PublicKey } from '@solana/web3.js';
-import { useDareProgram } from '@/hooks/useDareProgram';
+import { useDareApi } from '@/hooks/useDareApi';
+import { useSocket } from '@/contexts/SocketContext';
 import { DareCard } from '@/components/DareCard';
 import { ProofSubmissionsList } from '@/components/ProofSubmissionsList';
 import { DareProgressChart } from '@/components/DareProgressChart';
@@ -12,11 +13,13 @@ import { BetFeed } from '@/components/BetFeed';
 import { ChatRoom } from '@/components/ChatRoom';
 import ContestantsSection from '@/components/dare/ContestantsSection';
 import { Dare } from '@/types';
+import { getMockDares } from '@/lib/mockDares';
 
 export default function DareDetailsPage() {
   const params = useParams();
   const router = useRouter();
-  const { fetchDare } = useDareProgram();
+  const { getDares } = useDareApi();
+  const { socket, joinDare, leaveDare } = useSocket();
   
   const [dare, setDare] = useState<Dare | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,6 +32,25 @@ export default function DareDetailsPage() {
       loadDare();
     }
   }, [dareId]);
+
+  // Listen for dare updates via WebSocket
+  useEffect(() => {
+    if (!socket || !dareId) return;
+
+    const handleDareUpdate = ({ dareId: updatedDareId, updateType }: { dareId: string; updateType: string }) => {
+      console.log(`[DareDetail] Dare updated via WebSocket: ${updatedDareId} - ${updateType}`);
+      // Reload dare if it's the one we're viewing
+      if (updatedDareId === dareId) {
+        loadDare();
+      }
+    };
+
+    socket.on('dare-data-changed', handleDareUpdate);
+
+    return () => {
+      socket.off('dare-data-changed', handleDareUpdate);
+    };
+  }, [socket, dareId]);
 
   const loadDare = async () => {
     try {
@@ -44,13 +66,13 @@ export default function DareDetailsPage() {
         return;
       }
       
-      // If not a demo dare, try to fetch from blockchain
+      // If not a demo dare, try to fetch from API
       try {
-        const darePublicKey = new PublicKey(dareId);
-        const dareData = await fetchDare(darePublicKey);
+        const allDares = await getDares();
+        const foundDare = allDares.find(d => d.publicKey.toString() === dareId);
         
-        if (dareData) {
-          setDare(dareData);
+        if (foundDare) {
+          setDare(foundDare);
         } else {
           setError('Dare not found');
         }
@@ -63,129 +85,6 @@ export default function DareDetailsPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Mock data function (same as homepage)
-  const getMockDares = () => {
-    const mockPublicKey = new PublicKey('11111111111111111111111111111111');
-    const now = Math.floor(Date.now() / 1000);
-    
-    return [
-      {
-        publicKey: mockPublicKey,
-        account: {
-          creator: mockPublicKey,
-          platformAuthority: mockPublicKey,
-          title: "EAT 10 GHOST PEPPERS IN 5 MINUTES",
-          description: "I DARE YOU TO CONSUME 10 CAROLINA REAPER GHOST PEPPERS WITHIN 5 MINUTES WITHOUT DRINKING ANYTHING. RECORD THE ENTIRE PROCESS.\n\nRules:\n• Must consume 10 full Carolina Reaper peppers\n• Time limit is strictly 5 minutes\n• No liquids allowed during or 10 minutes after\n• Must be recorded in one continuous take\n• Face must be visible throughout recording\n• Must show peppers before consumption\n• Timer must be visible in video",
-          deadline: now + (7 * 24 * 60 * 60), // 7 days from now
-          minBet: 0.05 * 1e9, // 0.05 SOL (fixed minimum bet)
-          totalPool: 2.5 * 1e9,
-          willDoPool: 1.2 * 1e9,
-          wontDoPool: 1.3 * 1e9,
-          isCompleted: false,
-          isExpired: false,
-          creatorFeeClaimed: false,
-          logoUrl: "https://brown-traditional-sheep-998.mypinata.cloud/ipfs/bafkreiacb5xsbqh63jxw665fjy5kxvqrp5um6mmupmjqafnegyk3yfr2gq",
-          bump: 1,
-        }
-      },
-      {
-        publicKey: mockPublicKey,
-        account: {
-          creator: mockPublicKey,
-          platformAuthority: mockPublicKey,
-          title: "SLEEP IN A CEMETERY FOR 24 HOURS",
-          description: "SPEND AN ENTIRE NIGHT AND DAY IN A GRAVEYARD. NO LEAVING THE PREMISES. DOCUMENT WITH TIMESTAMPS EVERY 2 HOURS.\n\nRules:\n• Must stay within cemetery boundaries for full 24 hours\n• No leaving for any reason including bathroom breaks\n• Must document with timestamp every 2 hours\n• Must record entry and exit times\n• No assistance from others during the challenge\n• Must show cemetery sign/name in initial recording",
-          deadline: now + (14 * 24 * 60 * 60), // 14 days from now
-          minBet: 0.05 * 1e9, // 0.05 SOL (fixed minimum bet)
-          totalPool: 5.7 * 1e9,
-          willDoPool: 2.1 * 1e9,
-          wontDoPool: 3.6 * 1e9,
-          isCompleted: false,
-          isExpired: false,
-          creatorFeeClaimed: false,
-          logoUrl: "https://brown-traditional-sheep-998.mypinata.cloud/ipfs/bafkreiacb5xsbqh63jxw665fjy5kxvqrp5um6mmupmjqafnegyk3yfr2gq",
-          bump: 1,
-        }
-      },
-      {
-        publicKey: mockPublicKey,
-        account: {
-          creator: mockPublicKey,
-          platformAuthority: mockPublicKey,
-          title: "SHAVE HEAD AND EYEBROWS COMPLETELY",
-          description: "COMPLETELY SHAVE OFF ALL HAIR INCLUDING EYEBROWS. MUST KEEP IT OFF FOR AT LEAST 30 DAYS. NO WIGS OR FAKE HAIR ALLOWED.\n\nRules:\n• Must shave head completely bald\n• Must remove all eyebrow hair\n• No wigs, hats, or fake hair for 30 days\n• Must document before/after with timestamps\n• Weekly progress photos required\n• No professional makeup to simulate hair",
-          deadline: now + (3 * 24 * 60 * 60), // 3 days from now
-          minBet: 0.05 * 1e9, // 0.05 SOL (fixed minimum bet)
-          totalPool: 8.9 * 1e9,
-          willDoPool: 5.1 * 1e9,
-          wontDoPool: 3.8 * 1e9,
-          isCompleted: false,
-          isExpired: false,
-          creatorFeeClaimed: false,
-          logoUrl: "https://brown-traditional-sheep-998.mypinata.cloud/ipfs/bafkreiacb5xsbqh63jxw665fjy5kxvqrp5um6mmupmjqafnegyk3yfr2gq",
-          bump: 1,
-        }
-      },
-      {
-        publicKey: mockPublicKey,
-        account: {
-          creator: mockPublicKey,
-          platformAuthority: mockPublicKey,
-          title: "WALK BACKWARDS FOR 24 HOURS",
-          description: "WALK ONLY BACKWARDS FOR 24 HOURS STRAIGHT. NO FORWARD STEPS ALLOWED. DOCUMENT THE JOURNEY WITH CONTINUOUS VIDEO.\n\nRules:\n• Zero forward steps for full 24 hours\n• Must be recorded continuously or with timestamps\n• No assistance from others for navigation\n• Must complete normal daily activities backwards\n• Can use mirrors but no guides or helpers\n• Must document start and end times clearly",
-          deadline: now + (10 * 24 * 60 * 60), // 10 days from now
-          minBet: 0.05 * 1e9, // 0.05 SOL (fixed minimum bet)
-          totalPool: 1.8 * 1e9,
-          willDoPool: 0.9 * 1e9,
-          wontDoPool: 0.9 * 1e9,
-          isCompleted: false,
-          isExpired: false,
-          creatorFeeClaimed: false,
-          logoUrl: "https://brown-traditional-sheep-998.mypinata.cloud/ipfs/bafkreiacb5xsbqh63jxw665fjy5kxvqrp5um6mmupmjqafnegyk3yfr2gq",
-          bump: 1,
-        }
-      },
-      {
-        publicKey: mockPublicKey,
-        account: {
-          creator: mockPublicKey,
-          platformAuthority: mockPublicKey,
-          title: "EAT NOTHING BUT MAYO FOR 3 DAYS",
-          description: "CONSUME ONLY MAYONNAISE FOR 72 HOURS. NO OTHER FOOD OR DRINKS EXCEPT WATER. MUST BE DOCUMENTED WITH MEAL TIMESTAMPS.",
-          deadline: now + (5 * 24 * 60 * 60), // 5 days from now
-          minBet: 0.05 * 1e9, // 0.05 SOL (fixed minimum bet)
-          totalPool: 3.4 * 1e9,
-          willDoPool: 1.8 * 1e9,
-          wontDoPool: 1.6 * 1e9,
-          isCompleted: false,
-          isExpired: false,
-          creatorFeeClaimed: false,
-          logoUrl: "https://brown-traditional-sheep-998.mypinata.cloud/ipfs/bafkreiacb5xsbqh63jxw665fjy5kxvqrp5um6mmupmjqafnegyk3yfr2gq",
-          bump: 1,
-        }
-      },
-      {
-        publicKey: mockPublicKey,
-        account: {
-          creator: mockPublicKey,
-          platformAuthority: mockPublicKey,
-          title: "TALK LIKE PIRATE FOR ONE MONTH",
-          description: "SPEAK ONLY IN PIRATE LANGUAGE FOR 30 CONSECUTIVE DAYS. MUST BE MAINTAINED IN ALL CONVERSATIONS, WORK, AND PUBLIC INTERACTIONS.",
-          deadline: now + (2 * 24 * 60 * 60), // 2 days from now
-          minBet: 0.05 * 1e9, // 0.05 SOL (fixed minimum bet)
-          totalPool: 6.2 * 1e9,
-          willDoPool: 3.7 * 1e9,
-          wontDoPool: 2.5 * 1e9,
-          isCompleted: false,
-          isExpired: false,
-          creatorFeeClaimed: false,
-          logoUrl: "https://brown-traditional-sheep-998.mypinata.cloud/ipfs/bafkreiacb5xsbqh63jxw665fjy5kxvqrp5um6mmupmjqafnegyk3yfr2gq",
-          bump: 1,
-        }
-      }
-    ];
   };
 
   const handleDareUpdate = () => {
@@ -287,8 +186,8 @@ export default function DareDetailsPage() {
 
           {/* Main Content - Three Column Layout */}
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-            {/* Left Column - Progress Chart and Bet Feed (3 columns) */}
-            <div className="xl:col-span-3 space-y-6">
+            {/* Left Column - Progress Chart and Bet Feed (3 columns) - STICKY */}
+            <div className="xl:col-span-3 space-y-6 xl:sticky xl:top-4 xl:self-start">
               {/* Progress Chart */}
               <DareProgressChart dare={dare} />
               

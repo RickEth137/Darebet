@@ -16,6 +16,15 @@ export interface Dare {
     isExpired: boolean;
     completionProof?: CompletionProof;
     creatorFeeClaimed: boolean;
+    completerFeeClaimed: boolean;
+    submissionCount: number;
+    winnersSelected: boolean;
+    firstPlaceWinner?: PublicKey;
+    secondPlaceWinner?: PublicKey;
+    thirdPlaceWinner?: PublicKey;
+    firstPlaceClaimed: boolean;
+    secondPlaceClaimed: boolean;
+    thirdPlaceClaimed: boolean;
     logoUrl?: string;
     bannerUrl?: string;
     bump: number;

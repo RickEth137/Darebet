@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import toast from 'react-hot-toast';
+import bs58 from 'bs58';
 
 interface User {
   id: string;
@@ -11,6 +12,7 @@ interface User {
   bio?: string;
   email?: string;
   avatar?: string;
+  banner?: string;
   createdAt: string;
   _count?: {
     bets: number;
@@ -22,18 +24,26 @@ interface UseUserReturn {
   user: User | null;
   loading: boolean;
   error: string | null;
-  registerUser: (username?: string, bio?: string, email?: string, avatar?: string) => Promise<boolean>;
+  registerUser: (username?: string, bio?: string, email?: string, avatar?: string, banner?: string) => Promise<boolean>;
+  updateUser: (username?: string, bio?: string, email?: string, avatar?: string, banner?: string) => Promise<boolean>;
   refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
+  shouldShowWelcome: boolean;
+  dismissWelcome: () => void;
 }
 
 export const useUser = (): UseUserReturn => {
-  const { publicKey, connected, connecting } = useWallet();
+  const { publicKey, connected, connecting, signMessage } = useWallet();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [shouldShowWelcome, setShouldShowWelcome] = useState(false);
 
-  const registerUser = useCallback(async (username?: string, bio?: string, email?: string, avatar?: string): Promise<boolean> => {
+  const dismissWelcome = useCallback(() => {
+    setShouldShowWelcome(false);
+  }, []);
+
+  const registerUser = useCallback(async (username?: string, bio?: string, email?: string, avatar?: string, banner?: string): Promise<boolean> => {
     if (!publicKey) {
       toast.error('Wallet not connected');
       return false;
@@ -52,6 +62,7 @@ export const useUser = (): UseUserReturn => {
           bio,
           email,
           avatar,
+          banner,
         }),
       });
 
@@ -61,6 +72,8 @@ export const useUser = (): UseUserReturn => {
         setUser(data.user);
         if (data.isNewUser) {
           toast.success('Welcome to Dare Bets! Your account has been created.');
+          // Show welcome modal for new users to complete their profile
+          setShouldShowWelcome(true);
         } else {
           toast.success('Welcome back!');
         }
@@ -68,6 +81,62 @@ export const useUser = (): UseUserReturn => {
       } else {
         setError(data.error);
         toast.error('Failed to register user');
+        return false;
+      }
+    } catch (err: any) {
+      const errorMsg = err.message || 'Failed to connect to server';
+      setError(errorMsg);
+      toast.error(errorMsg);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [publicKey]);
+
+  const updateUser = useCallback(async (username?: string, bio?: string, email?: string, avatar?: string, banner?: string): Promise<boolean> => {
+    if (!publicKey) {
+      toast.error('Wallet not connected');
+      return false;
+    }
+
+    if (!signMessage) {
+      toast.error('Wallet does not support message signing');
+      return false;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const message = `Update Profile: ${publicKey.toString()}`;
+      const messageBytes = new TextEncoder().encode(message);
+      const signatureBytes = await signMessage(messageBytes);
+      const signature = bs58.encode(signatureBytes);
+
+      const response = await fetch('/api/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress: publicKey.toString(),
+          username,
+          bio,
+          email,
+          avatar,
+          banner,
+          signature,
+          message,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setUser(data.user);
+        toast.success('Profile updated successfully!');
+        return true;
+      } else {
+        setError(data.error);
+        toast.error(data.error || 'Failed to update profile');
         return false;
       }
     } catch (err: any) {
@@ -137,8 +206,11 @@ export const useUser = (): UseUserReturn => {
             setUser(data.user);
           } else if (response.status === 404) {
             console.log('useUser: User not found, registering new user');
-            // User doesn't exist, auto-register them
-            await registerUser();
+            // User doesn't exist, auto-register them and show welcome modal
+            const registered = await registerUser();
+            if (registered) {
+              setShouldShowWelcome(true);
+            }
           } else {
             console.log('useUser: Error fetching user:', data.error);
             setError(data.error);
@@ -169,7 +241,10 @@ export const useUser = (): UseUserReturn => {
     loading,
     error,
     registerUser,
+    updateUser,
     refreshUser,
     isAuthenticated: !!user && connected,
+    shouldShowWelcome,
+    dismissWelcome,
   };
 };

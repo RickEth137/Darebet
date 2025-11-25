@@ -12,6 +12,9 @@ interface SocketContextType {
   sendMessage: (dareId: string, message: any) => void;
   startTyping: (dareId: string) => void;
   stopTyping: (dareId: string) => void;
+  notifyDareUpdate: (dareId: string, updateType: string) => void;
+  joinDaresList: () => void;
+  leaveDaresList: () => void;
 }
 
 const SocketContext = createContext<SocketContextType>({
@@ -22,6 +25,9 @@ const SocketContext = createContext<SocketContextType>({
   sendMessage: () => {},
   startTyping: () => {},
   stopTyping: () => {},
+  notifyDareUpdate: () => {},
+  joinDaresList: () => {},
+  leaveDaresList: () => {},
 });
 
 export const useSocket = () => useContext(SocketContext);
@@ -45,7 +51,10 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   useEffect(() => {
     // Initialize Socket.io connection
-    const socketInstance = io(process.env.NEXT_PUBLIC_APP_URL || '', {
+    // Use window.location.origin to ensure we connect to the same host/port
+    const socketUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    
+    const socketInstance = io(socketUrl, {
       path: '/api/socket',
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -177,6 +186,30 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
   }, [socket, user]);
 
+  const notifyDareUpdate = useCallback((dareId: string, updateType: string) => {
+    if (!socket) return;
+
+    console.log(`[Socket] Notifying dare update: ${dareId} - ${updateType}`);
+    socket.emit('dare-updated', {
+      dareId,
+      updateType,
+    });
+  }, [socket]);
+
+  const joinDaresList = useCallback(() => {
+    if (!socket) return;
+
+    console.log('[Socket] Joining dares-list room');
+    socket.emit('join-dares-list');
+  }, [socket]);
+
+  const leaveDaresList = useCallback(() => {
+    if (!socket) return;
+
+    console.log('[Socket] Leaving dares-list room');
+    socket.emit('leave-dares-list');
+  }, [socket]);
+
   return (
     <SocketContext.Provider
       value={{
@@ -187,6 +220,9 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         sendMessage,
         startTyping,
         stopTyping,
+        notifyDareUpdate,
+        joinDaresList,
+        leaveDaresList,
       }}
     >
       {children}

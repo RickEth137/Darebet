@@ -28,8 +28,20 @@ interface WalletContextProviderProps {
 export const WalletContextProvider: React.FC<WalletContextProviderProps> = ({
   children,
 }) => {
-  const network = WalletAdapterNetwork.Devnet;
-  const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+  // Use configured cluster or default to Mainnet
+  const network = (process.env.NEXT_PUBLIC_CLUSTER as WalletAdapterNetwork) || WalletAdapterNetwork.Mainnet;
+  
+  // Use configured RPC endpoint or fallback to public cluster API
+  const endpoint = useMemo(() => 
+    process.env.NEXT_PUBLIC_RPC_ENDPOINT || clusterApiUrl(network), 
+    [network]
+  );
+
+  // Connection config with optional WSS endpoint
+  const config = useMemo(() => ({
+    wsEndpoint: process.env.NEXT_PUBLIC_WSS_ENDPOINT,
+    commitment: 'confirmed' as const,
+  }), []);
 
   const wallets = useMemo(
     () => [
@@ -39,7 +51,7 @@ export const WalletContextProvider: React.FC<WalletContextProviderProps> = ({
       
       // WalletConnect for mobile wallet connections
       new WalletConnectWalletAdapter({
-        network: network,
+        network: network as WalletAdapterNetwork.Mainnet | WalletAdapterNetwork.Devnet,
         options: {
           relayUrl: 'wss://relay.walletconnect.com',
           projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'devils-due-betting',
@@ -62,7 +74,7 @@ export const WalletContextProvider: React.FC<WalletContextProviderProps> = ({
   );
 
   return (
-    <ConnectionProvider endpoint={endpoint}>
+    <ConnectionProvider endpoint={endpoint} config={config}>
       <WalletProvider 
         wallets={wallets} 
         autoConnect={true}

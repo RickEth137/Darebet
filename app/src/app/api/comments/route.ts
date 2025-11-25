@@ -6,17 +6,35 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const dareId = searchParams.get('dareId');
+    const onChainId = searchParams.get('onChainId');
     const page = parseInt(searchParams.get('page') || '0');
     const limit = parseInt(searchParams.get('limit') || '5');
 
-    if (!dareId) {
+    if (!dareId && !onChainId) {
+      return NextResponse.json({ error: 'Dare ID or onChainId is required' }, { status: 400 });
+    }
+
+    let targetDareId = dareId;
+    if (!targetDareId && onChainId) {
+      const dare = await db.dare.findUnique({ where: { onChainId } });
+      if (!dare) {
+        return NextResponse.json({
+          comments: [],
+          totalCount: 0,
+          hasMore: false,
+        });
+      }
+      targetDareId = dare.id;
+    }
+
+    if (!targetDareId) {
       return NextResponse.json({ error: 'Dare ID is required' }, { status: 400 });
     }
 
     // Get top-level comments (no parent) with replies
     const comments = await db.comment.findMany({
       where: {
-        dareId,
+        dareId: targetDareId,
         parentId: null, // Only top-level comments
       },
       include: {
@@ -78,7 +96,7 @@ export async function GET(request: NextRequest) {
     // Get total count for pagination
     const totalCount = await db.comment.count({
       where: {
-        dareId,
+        dareId: targetDareId,
         parentId: null,
       },
     });
@@ -138,21 +156,30 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { dareId, content, userWallet, username, parentId } = body;
+    const { dareId, onChainId, content, userWallet, username, parentId } = body;
 
-    if (!dareId || !content || !userWallet) {
+    if ((!dareId && !onChainId) || !content || !userWallet) {
       return NextResponse.json({ 
-        error: 'Dare ID, content, and user wallet are required' 
+        error: 'Dare ID (or onChainId), content, and user wallet are required' 
       }, { status: 400 });
     }
 
-    // Check if dare exists
-    const dare = await db.dare.findUnique({
-      where: { id: dareId }
-    });
+    let targetDareId = dareId;
+    if (!targetDareId && onChainId) {
+      const dare = await db.dare.findUnique({ where: { onChainId } });
+      if (!dare) {
+        return NextResponse.json({ error: 'Dare not found' }, { status: 404 });
+      }
+      targetDareId = dare.id;
+    } else {
+      // Check if dare exists using dareId
+      const dare = await db.dare.findUnique({
+        where: { id: targetDareId }
+      });
 
-    if (!dare) {
-      return NextResponse.json({ error: 'Dare not found' }, { status: 404 });
+      if (!dare) {
+        return NextResponse.json({ error: 'Dare not found' }, { status: 404 });
+      }
     }
 
     // Find or create user
@@ -172,7 +199,7 @@ export async function POST(request: NextRequest) {
     // Create the comment
     const comment = await db.comment.create({
       data: {
-        dareId,
+        dareId: targetDareId,
         userId: user.id,
         userWallet,
         username: user.username || username,

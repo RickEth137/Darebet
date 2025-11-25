@@ -3,7 +3,7 @@
 
 generator client {
   provider = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]
+  // previewFeatures = ["driverAdapters"] // Deprecated
 }
 
 datasource db {
@@ -13,7 +13,7 @@ datasource db {
 
 model Dare {
   id              String   @id @default(cuid())
-  onChainId       String   @unique // The Solana program dare account public key
+  onChainId       String?  @unique // Optional now, for backward compatibility or hybrid mode
   title           String
   description     String
   creator         String   // Wallet address
@@ -24,9 +24,18 @@ model Dare {
   totalPool       Float    @default(0)
   willDoPool      Float    @default(0)
   wontDoPool      Float    @default(0)
-  isCompleted     Boolean  @default(false)
-  isExpired       Boolean  @default(false)
+  
+  // Social features
+  likesCount      Int      @default(0)
+
+  // Status tracking
+  status          DareStatus @default(ACTIVE)
+  txSignature     String?    // Transaction signature for creation fee (if any)
+
+  isCompleted     Boolean  @default(false) // Deprecated, use status
+  isExpired       Boolean  @default(false) // Deprecated, use status
   creatorFeeClaimed Boolean @default(false)
+  completerFeeClaimed Boolean @default(false)
   
   // Media and proof
   proofMediaUrl   String?  // Pinata IPFS URL
@@ -42,19 +51,42 @@ model Dare {
   bets            Bet[]
   proofSubmissions ProofSubmission[]
   comments        Comment[]
+  likes           DareLike[]
   chatRoom        ChatRoom?
   
   @@map("dares")
 }
 
+model DareLike {
+  id         String   @id @default(cuid())
+  dareId     String
+  userId     String
+  userWallet String   // Wallet address for easy lookup
+  createdAt  DateTime @default(now())
+  
+  // Relations
+  dare       Dare     @relation(fields: [dareId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Unique constraint to prevent duplicate likes
+  @@unique([dareId, userId])
+  @@map("dare_likes")
+}
+
 model Bet {
   id              String   @id @default(cuid())
-  onChainId       String   @unique // The Solana program bet account public key
+  onChainId       String?  @unique // Optional
   dareId          String
   userId          String   // Reference to User
   bettor          String   // Wallet address
   amount          Float
   betType         BetType
+  
+  // Status tracking
+  status          BetStatus @default(PLACED)
+  txSignature     String?   // Transaction signature for the bet payment
+  payoutSignature String?   // Transaction signature for the payout (if won)
+
   isClaimed       Boolean  @default(false)
   isEarlyCashOut  Boolean  @default(false)
   
@@ -102,8 +134,8 @@ model ProofSubmission {
   submittedAt     DateTime @default(now())
   createdAt       DateTime @default(now())
   
-  // Relations
-  dare            Dare     @relation(fields: [dareId], references: [id], onDelete: Cascade)
+  // Relations - dare is optional to allow submissions for on-chain-only dares
+  dare            Dare?    @relation(fields: [dareId], references: [id], onDelete: Cascade)
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   likes           ProofSubmissionLike[]
   comments        ProofSubmissionComment[]
@@ -118,6 +150,7 @@ model User {
   bio             String?  // User bio/description
   email           String?  // Optional email
   avatar          String?  // Pinata IPFS URL for profile pic
+  banner          String?  // Pinata IPFS URL for profile banner
   
   // Stats
   daresCreated    Int      @default(0)
@@ -132,6 +165,7 @@ model User {
   // Relations
   bets            Bet[]
   proofSubmissions ProofSubmission[]
+  dareLikes       DareLike[]
   betLikes        BetLike[]
   betComments     BetComment[]
   proofLikes      ProofSubmissionLike[]
@@ -346,4 +380,21 @@ enum MessageType {
   TEXT
   SYSTEM
   ANNOUNCEMENT
+}
+
+enum DareStatus {
+  ACTIVE
+  PENDING_PROOF
+  COMPLETED
+  FAILED
+  DISPUTED
+  EXPIRED
+}
+
+enum BetStatus {
+  PLACED
+  WON
+  LOST
+  REFUNDED
+  CASHED_OUT
 }

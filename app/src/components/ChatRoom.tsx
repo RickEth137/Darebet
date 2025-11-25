@@ -65,15 +65,39 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ dareId, dareTitle }) => {
   useEffect(() => {
     if (!publicKey) return;
 
-    fetch(`/api/users/${publicKey.toBase58()}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data) {
-          setUserId(data.id);
-          setUsername(data.username || `${publicKey.toBase58().slice(0, 4)}...${publicKey.toBase58().slice(-4)}`);
+    const fetchUser = async () => {
+      try {
+        // Try to get user by wallet
+        const res = await fetch(`/api/users?walletAddress=${publicKey.toBase58()}`);
+        const data = await res.json();
+        
+        if (data.success && data.user) {
+          setUserId(data.user.id);
+          setUsername(data.user.username || `${publicKey.toBase58().slice(0, 4)}...${publicKey.toBase58().slice(-4)}`);
+        } else {
+          // If user doesn't exist, create a temporary one or register them
+          // For now, we'll just register them automatically if they don't exist
+          const registerRes = await fetch('/api/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              walletAddress: publicKey.toBase58(),
+              // Optional: generate a random username or leave blank
+            })
+          });
+          
+          const registerData = await registerRes.json();
+          if (registerData.success && registerData.user) {
+            setUserId(registerData.user.id);
+            setUsername(registerData.user.username || `${publicKey.toBase58().slice(0, 4)}...${publicKey.toBase58().slice(-4)}`);
+          }
         }
-      })
-      .catch(console.error);
+      } catch (error) {
+        console.error('Error fetching/creating user for chat:', error);
+      }
+    };
+
+    fetchUser();
   }, [publicKey]);
 
   // Auto-scroll to bottom when new messages arrive
