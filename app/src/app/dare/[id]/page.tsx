@@ -27,7 +27,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const imageUrl = dare.logoUrl || dare.bannerUrl || 'https://brown-traditional-sheep-998.mypinata.cloud/ipfs/bafkreiacb5xsbqh63jxw665fjy5kxvqrp5um6mmupmjqafnegyk3yfr2gq';
+  const DEFAULT_IMAGES = [
+    'https://brown-traditional-sheep-998.mypinata.cloud/ipfs/bafkreiacb5xsbqh63jxw665fjy5kxvqrp5um6mmupmjqafnegyk3yfr2gq',
+    'https://brown-traditional-sheep-998.mypinata.cloud/ipfs/bafybeih6nwb4mkrtqg2pucdgutumvn464m6nup5clop5msyfzkmifzeumy'
+  ];
+
+  let imageUrl = dare.logoUrl || dare.bannerUrl;
+  
+  // If no image or it's one of the defaults, generate a dynamic OG image
+  if (!imageUrl || DEFAULT_IMAGES.includes(imageUrl)) {
+    const params = new URLSearchParams();
+    params.set('title', dare.title);
+    params.set('description', dare.description.substring(0, 100));
+    params.set('amount', dare.minBet.toString());
+    imageUrl = `https://darebet.fun/api/og?${params.toString()}`;
+  }
 
   return {
     title: `${dare.title} | DareBet`,
