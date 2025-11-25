@@ -17,7 +17,7 @@ export const metadata = {
     description: 'A Solana-based platform where you can create dares and bet on outcomes',
     images: [
       {
-        url: 'https://darebet.fun/images/og-default.jpg',
+        url: 'https://brown-traditional-sheep-998.mypinata.cloud/ipfs/bafkreiacb5xsbqh63jxw665fjy5kxvqrp5um6mmupmjqafnegyk3yfr2gq',
         width: 1200,
         height: 630,
         alt: 'DareBet Platform',
@@ -28,7 +28,7 @@ export const metadata = {
     card: 'summary_large_image',
     title: 'Dare Bets - Dare Betting Platform',
     description: 'A Solana-based platform where you can create dares and bet on outcomes',
-    images: ['https://darebet.fun/images/og-default.jpg'],
+    images: ['https://brown-traditional-sheep-998.mypinata.cloud/ipfs/bafkreiacb5xsbqh63jxw665fjy5kxvqrp5um6mmupmjqafnegyk3yfr2gq'],
     creator: '@darebetdotfun',
   },
 };

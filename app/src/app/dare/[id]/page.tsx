@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const imageUrl = dare.logoUrl || dare.bannerUrl || 'https://darebet.fun/images/og-default.jpg';
+  const imageUrl = dare.logoUrl || dare.bannerUrl || 'https://brown-traditional-sheep-998.mypinata.cloud/ipfs/bafkreiacb5xsbqh63jxw665fjy5kxvqrp5um6mmupmjqafnegyk3yfr2gq';
 
   return {
     title: `${dare.title} | DareBet`,
