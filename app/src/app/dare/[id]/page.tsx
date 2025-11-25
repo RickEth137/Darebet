@@ -1,13 +1,17 @@
-import { Metadata } from 'next';
+import { Metadata, ResolvingMetadata } from 'next';
 import { db } from '@/lib/db';
 import DareDetailsClient from './DareDetailsClient';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 interface Props {
   params: { id: string };
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params }: Props, parent: ResolvingMetadata): Promise<Metadata> {
   const id = params.id;
+  console.log(`[Metadata] Generating for dare: ${id}`);
 
   try {
     // Fetch dare from DB
@@ -22,6 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     });
 
     if (!dare) {
+      console.log(`[Metadata] Dare not found: ${id}`);
       return {
         title: 'Dare Not Found | DareBet',
         description: 'The dare you are looking for does not exist.',
@@ -43,6 +48,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       params.set('amount', dare.minBet.toString());
       imageUrl = `https://darebet.fun/api/og?${params.toString()}`;
     }
+
+    console.log(`[Metadata] Generated for: ${dare.title}, Image: ${imageUrl}`);
 
     return {
       title: `${dare.title} | DareBet`,
@@ -71,7 +78,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       },
     };
   } catch (error) {
-    console.error('Error generating metadata for dare:', id, error);
+    console.error('[Metadata] Error generating metadata for dare:', id, error);
     return {
       title: 'Dare Details | DareBet',
       description: 'View dare details and place your bets.',
